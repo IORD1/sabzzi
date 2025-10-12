@@ -6,6 +6,7 @@ import { ArrowLeft, Share2, Copy, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { haptics } from '@/lib/haptics';
+import { ShareListDialog } from '@/components/share-list-dialog';
 
 interface ListItem {
   itemId: string;
@@ -42,6 +43,8 @@ export default function ListDetailPage() {
   const [list, setList] = useState<ListDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [togglingItems, setTogglingItems] = useState<Set<string>>(new Set());
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const currentUserId = 'localhost-dev-user'; // TODO: Get from session/auth
 
   useEffect(() => {
     fetchList();
@@ -272,8 +275,7 @@ export default function ListDetailPage() {
             className="h-12"
             onClick={() => {
               haptics.buttonTap();
-              // TODO: Implement share
-              console.log('Share list');
+              setShowShareDialog(true);
             }}
           >
             <Share2 className="h-4 w-4 mr-2" />
@@ -297,6 +299,18 @@ export default function ListDetailPage() {
           </Button>
         </div>
       </div>
+
+      {/* Share Dialog */}
+      <ShareListDialog
+        isOpen={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        listId={listId}
+        currentUserId={currentUserId}
+        onSuccess={() => {
+          // Optionally refresh the list to see updated shared users
+          fetchList();
+        }}
+      />
     </div>
   );
 }

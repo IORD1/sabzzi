@@ -6,6 +6,7 @@ import { Settings, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { haptics } from '@/lib/haptics';
 import { ListCard } from '@/components/list-card';
+import { ShareListDialog } from '@/components/share-list-dialog';
 
 interface ListSummary {
   listId: string;
@@ -24,6 +25,9 @@ export default function HomePage() {
   const [toBuyLists, setToBuyLists] = useState<ListSummary[]>([]);
   const [isLoadingMyLists, setIsLoadingMyLists] = useState(true);
   const [isLoadingToBuy, setIsLoadingToBuy] = useState(true);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const currentUserId = 'localhost-dev-user'; // TODO: Get from session/auth
 
   // Fetch My Lists
   useEffect(() => {
@@ -81,6 +85,25 @@ export default function HomePage() {
     router.push('/lists/create');
   };
 
+  const refreshLists = async () => {
+    // Refresh both tabs
+    try {
+      const myListsResponse = await fetch('/api/lists/my-lists');
+      if (myListsResponse.ok) {
+        const data = await myListsResponse.json();
+        setMyLists(data.lists || []);
+      }
+
+      const toBuyResponse = await fetch('/api/lists/to-buy');
+      if (toBuyResponse.ok) {
+        const data = await toBuyResponse.json();
+        setToBuyLists(data.lists || []);
+      }
+    } catch (error) {
+      console.error('Error refreshing lists:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
@@ -132,7 +155,15 @@ export default function HomePage() {
       {/* Content */}
       <main className="flex-1 overflow-y-auto p-4">
         {activeTab === 'my-lists' ? (
-          <MyListsTab lists={myLists} isLoading={isLoadingMyLists} router={router} />
+          <MyListsTab
+            lists={myLists}
+            isLoading={isLoadingMyLists}
+            router={router}
+            onShare={(listId) => {
+              setSelectedListId(listId);
+              setShowShareDialog(true);
+            }}
+          />
         ) : (
           <ToBuyTab lists={toBuyLists} isLoading={isLoadingToBuy} router={router} />
         )}
@@ -148,6 +179,22 @@ export default function HomePage() {
           <Plus className="h-6 w-6" />
         </button>
       )}
+
+      {/* Share Dialog */}
+      {selectedListId && (
+        <ShareListDialog
+          isOpen={showShareDialog}
+          onClose={() => {
+            setShowShareDialog(false);
+            setSelectedListId(null);
+          }}
+          listId={selectedListId}
+          currentUserId={currentUserId}
+          onSuccess={() => {
+            refreshLists();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -156,10 +203,12 @@ function MyListsTab({
   lists,
   isLoading,
   router,
+  onShare,
 }: {
   lists: ListSummary[];
   isLoading: boolean;
   router: any;
+  onShare: (listId: string) => void;
 }) {
   if (isLoading) {
     return (
@@ -201,8 +250,7 @@ function MyListsTab({
             router.push(`/lists/${list.listId}`);
           }}
           onShare={() => {
-            // TODO: Implement share
-            console.log('Share list:', list.listId);
+            onShare(list.listId);
           }}
           onDuplicate={() => {
             // TODO: Implement duplicate
