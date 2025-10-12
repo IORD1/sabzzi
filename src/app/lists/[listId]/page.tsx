@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Share2, Copy, Trash2 } from 'lucide-react';
+import { ArrowLeft, Share2, Copy, Trash2, Send, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { haptics } from '@/lib/haptics';
 import { ShareListDialog } from '@/components/share-list-dialog';
 
@@ -20,6 +21,14 @@ interface ListItem {
   isBought: boolean;
   boughtBy: string | null;
   boughtAt: Date | null;
+}
+
+interface Comment {
+  commentId: string;
+  userId: string;
+  userName: string;
+  text: string;
+  createdAt: Date | string;
 }
 
 interface ListDetail {
@@ -44,10 +53,16 @@ export default function ListDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [togglingItems, setTogglingItems] = useState<Set<string>>(new Set());
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [isAddingComment, setIsAddingComment] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const commentInputRef = useRef<HTMLInputElement>(null);
   const currentUserId = 'localhost-dev-user'; // TODO: Get from session/auth
 
   useEffect(() => {
     fetchList();
+    fetchComments();
   }, [listId]);
 
   const fetchList = async () => {
@@ -75,6 +90,79 @@ export default function ListDetailPage() {
   const handleBack = () => {
     haptics.buttonTap();
     router.push('/home');
+  };
+
+  const fetchComments = async () => {
+    try {
+      const response = await fetch(`/api/lists/${listId}/comments`);
+      if (response.ok) {
+        const data = await response.json();
+        setComments(data.comments || []);
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!commentText.trim()) return;
+
+    haptics.buttonTap();
+    setIsAddingComment(true);
+
+    try {
+      const response = await fetch(`/api/lists/${listId}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: commentText }),
+      });
+
+      if (response.ok) {
+        haptics.success();
+        setCommentText('');
+        await fetchComments();
+      } else {
+        haptics.error();
+        alert('Failed to add comment');
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      haptics.error();
+      alert('Error adding comment');
+    } finally {
+      setIsAddingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Delete this comment?')) {
+      return;
+    }
+
+    haptics.buttonTap();
+
+    try {
+      const response = await fetch(
+        `/api/lists/${listId}/comments/${commentId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (response.ok) {
+        haptics.success();
+        await fetchComments();
+      } else {
+        haptics.error();
+        alert('Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      haptics.error();
+      alert('Error deleting comment');
+    }
   };
 
   const handleToggleItem = async (itemId: string, currentBought: boolean) => {
@@ -214,7 +302,7 @@ export default function ListDetailPage() {
       </header>
 
       {/* Items List */}
-      <main className="flex-1 overflow-y-auto p-4 pb-24">
+      <main className="flex-1 overflow-y-auto p-4 pb-40">
         {list.items.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📋</div>
@@ -265,6 +353,87 @@ export default function ListDetailPage() {
             ))}
           </div>
         )}
+
+        {/* Comments Section */}
+        <div className="mt-8">
+          <button
+            onClick={() => {
+              haptics.buttonTap();
+              setShowComments(!showComments);
+            }}
+            className="flex items-center gap-2 text-sm font-medium mb-4"
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span>Comments ({comments.length})</span>
+          </button>
+
+          {showComments && (
+            <div className="space-y-4">
+              {comments.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No comments yet. Be the first to comment!
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {comments.map((comment) => (
+                    <div
+                      key={comment.commentId}
+                      className="p-3 border rounded-lg bg-card"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium">
+                              {comment.userName}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(comment.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-sm">{comment.text}</p>
+                        </div>
+                        {comment.userId === currentUserId && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteComment(comment.commentId)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Comment Input */}
+              <div className="flex gap-2">
+                <Input
+                  ref={commentInputRef}
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Add a comment..."
+                  className="h-11"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleAddComment();
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleAddComment}
+                  disabled={!commentText.trim() || isAddingComment}
+                  className="h-11 w-11 p-0"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Action Buttons */}

@@ -76,8 +76,7 @@ export default function HomePage() {
 
   const handleSettingsClick = () => {
     haptics.buttonTap();
-    // TODO: Navigate to settings
-    console.log('Settings clicked');
+    router.push('/settings');
   };
 
   const handleCreateList = () => {
