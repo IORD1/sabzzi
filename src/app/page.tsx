@@ -282,7 +282,7 @@ export default function Home() {
 
   // Production login screen (will be implemented later)
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 pb-12">
       <div className="text-center max-w-md mx-auto px-4">
         <div className="text-6xl mb-4">🥬</div>
         <h1 className="text-5xl font-bold mb-2 text-green-800">Sabzzi</h1>

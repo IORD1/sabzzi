@@ -265,7 +265,7 @@ export default function ListDetailPage() {
   const progressPercentage = totalItems > 0 ? (boughtItems / totalItems) * 100 : 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background pb-12">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 px-4 h-16">
@@ -437,7 +437,7 @@ export default function ListDetailPage() {
       </main>
 
       {/* Action Buttons */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-10 bg-background border-t">
         <div className="grid grid-cols-3 gap-2">
           <Button
             variant="outline"

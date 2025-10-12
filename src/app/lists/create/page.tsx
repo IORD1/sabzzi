@@ -224,7 +224,7 @@ export default function CreateListPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background pb-12">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 px-4 h-16">
