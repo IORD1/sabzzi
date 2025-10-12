@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { haptics } from '@/lib/haptics';
+import { haptics, getHapticPreference, setHapticPreference } from '@/lib/haptics';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -13,11 +13,8 @@ export default function SettingsPage() {
   const userId = 'localhost-dev-user'; // TODO: Get from session/auth
 
   useEffect(() => {
-    // Load haptics preference from localStorage
-    const savedHaptics = localStorage.getItem('hapticsEnabled');
-    if (savedHaptics !== null) {
-      setHapticsEnabled(savedHaptics === 'true');
-    }
+    // Load haptics preference
+    setHapticsEnabled(getHapticPreference());
   }, []);
 
   const handleBack = () => {
@@ -28,7 +25,7 @@ export default function SettingsPage() {
   const handleToggleHaptics = () => {
     const newValue = !hapticsEnabled;
     setHapticsEnabled(newValue);
-    localStorage.setItem('hapticsEnabled', String(newValue));
+    setHapticPreference(newValue);
 
     if (newValue) {
       haptics.buttonTap();

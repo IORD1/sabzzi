@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="115" fill="#22C55E"/>
+
+  <!-- Shopping bag shape -->
+  <path d="M160 200 L160 400 C160 420 170 430 190 430 L322 430 C342 430 352 420 352 400 L352 200"
+        stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Bag handles -->
+  <path d="M180 200 C180 150 200 120 256 120 C312 120 332 150 332 200"
+        stroke="white" stroke-width="24" stroke-linecap="round" fill="none"/>
+
+  <!-- Leaf decoration (representing vegetables) -->
+  <g transform="translate(256, 280)">
+    <!-- Main leaf -->
+    <path d="M -40 0 Q -40 -50 0 -70 Q 40 -50 40 0 Q 20 10 0 0 Q -20 10 -40 0 Z"
+          fill="#DCFCE7" stroke="#10B981" stroke-width="3"/>
+
+    <!-- Leaf vein -->
+    <line x1="0" y1="-70" x2="0" y2="0" stroke="#10B981" stroke-width="3"/>
+
+    <!-- Side veins -->
+    <path d="M 0 -50 Q 15 -40 20 -30" stroke="#10B981" stroke-width="2" fill="none"/>
+    <path d="M 0 -50 Q -15 -40 -20 -30" stroke="#10B981" stroke-width="2" fill="none"/>
+    <path d="M 0 -30 Q 15 -22 22 -12" stroke="#10B981" stroke-width="2" fill="none"/>
+    <path d="M 0 -30 Q -15 -22 -22 -12" stroke="#10B981" stroke-width="2" fill="none"/>
+  </g>
+</svg>
