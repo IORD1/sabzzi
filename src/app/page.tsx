@@ -74,12 +74,26 @@ export default function Home() {
       const userId = new Uint8Array(16);
       crypto.getRandomValues(userId);
 
+      // Step 3: Get the proper rpId (domain without port for Vercel)
+      const getRpId = () => {
+        const hostname = window.location.hostname;
+        // For localhost, use 'localhost', for Vercel, use full hostname
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          return 'localhost';
+        }
+        // For Vercel or production, use the full hostname
+        return hostname;
+      };
+
+      const rpId = getRpId();
+      console.log('🔐 Using rpId:', rpId);
+
       // Step 3: Create WebAuthn credential
       const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
         challenge: new Uint8Array(16), // Random challenge
         rp: {
           name: 'Sabzzi - Grocery Tracker',
-          id: window.location.hostname,
+          id: rpId,
         },
         user: {
           id: userId,
@@ -115,9 +129,24 @@ export default function Home() {
         setPendingCredential({ credentialId, publicKey });
         setShowNameDialog(true);
       }
-    } catch (error) {
-      console.error('Error registering passkey:', error);
-      alert('Failed to register passkey. Please try again.');
+    } catch (error: any) {
+      console.error('❌ Error registering passkey:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+      });
+
+      let errorMessage = 'Failed to register passkey. Please try again.';
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Registration was cancelled or timed out.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'Passkeys are not supported on this device/browser.';
+      } else if (error.name === 'SecurityError') {
+        errorMessage = 'Security error. Make sure you are using HTTPS.';
+      }
+
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -169,11 +198,23 @@ export default function Home() {
     try {
       setIsLoading(true);
 
+      // Get the proper rpId (must match registration)
+      const getRpId = () => {
+        const hostname = window.location.hostname;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          return 'localhost';
+        }
+        return hostname;
+      };
+
+      const rpId = getRpId();
+      console.log('🔐 Using rpId for login:', rpId);
+
       // Step 1: Request authentication from device
       const assertion = (await navigator.credentials.get({
         publicKey: {
           challenge: new Uint8Array(16),
-          rpId: window.location.hostname, // Must match registration
+          rpId: rpId, // Must match registration
           userVerification: 'required',
           timeout: 60000,
         },
@@ -203,13 +244,22 @@ export default function Home() {
       }
     } catch (error: any) {
       console.error('❌ Error authenticating with passkey:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+      });
 
       // Provide more helpful error messages
       let errorMessage = 'Failed to authenticate. Please try again.';
       if (error.name === 'NotAllowedError') {
         errorMessage = 'Authentication was cancelled or timed out.';
       } else if (error.name === 'InvalidStateError') {
-        errorMessage = 'No passkey found. Please register first.';
+        errorMessage = 'No passkey found for this device. Please register a new passkey on this device first.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'Passkeys are not supported on this device/browser.';
+      } else if (error.name === 'SecurityError') {
+        errorMessage = 'Security error. Make sure you are using HTTPS.';
       }
 
       alert(errorMessage);
@@ -259,31 +309,10 @@ export default function Home() {
           >
             {isLoading ? 'Processing...' : 'Login with Passkey'}
           </Button>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-muted"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-gradient-to-br from-green-50 to-green-100 px-2 text-muted-foreground">
-                or
-              </span>
-            </div>
-          </div>
-
-          <Button
-            variant="secondary"
-            className="w-full h-12 text-lg"
-            size="lg"
-            onClick={handleDevAuth}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Loading...' : 'Continue as Guest'}
-          </Button>
         </div>
 
         <p className="mt-6 text-sm text-muted-foreground">
-          Guest mode uses a temporary account for testing
+          Secure authentication using your device's biometrics
         </p>
       </div>
 

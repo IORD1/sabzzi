@@ -56,7 +56,7 @@ export default function ListDetailPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [isAddingComment, setIsAddingComment] = useState(false);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(true);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const currentUserId = 'localhost-dev-user'; // TODO: Get from session/auth
 
