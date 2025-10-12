@@ -1,0 +1,389 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Plus, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { haptics } from '@/lib/haptics';
+import { QuantitySelector } from '@/components/quantity-selector';
+import { ItemCreationDialog } from '@/components/item-creation-dialog';
+
+interface ListItem {
+  itemId?: string;
+  itemName: string;
+  itemNameHindi?: string;
+  itemNameMarathi?: string;
+  quantity: {
+    value: number;
+    unit: string;
+  };
+  quantityType?: 'weight' | 'money' | 'count';
+}
+
+interface SearchResultItem {
+  itemId: string;
+  itemName: string;
+  itemNameHindi?: string;
+  itemNameMarathi?: string;
+  defaultQuantity: {
+    value: number;
+    unit: string;
+  };
+}
+
+export default function CreateListPage() {
+  const router = useRouter();
+  const [listName, setListName] = useState('');
+  const [emoji, setEmoji] = useState('🛒');
+  const [items, setItems] = useState<ListItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showQuantitySelector, setShowQuantitySelector] = useState(false);
+  const [showItemCreationDialog, setShowItemCreationDialog] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [selectedItem, setSelectedItem] = useState<{
+    itemId?: string;
+    itemName: string;
+    itemNameHindi?: string;
+    itemNameMarathi?: string;
+    defaultQuantity?: { value: number; unit: string };
+  } | null>(null);
+
+  // Generate auto list name on mount
+  useEffect(() => {
+    generateListName();
+  }, []);
+
+  // Search items when query changes
+  useEffect(() => {
+    const searchItems = async () => {
+      if (searchQuery.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const response = await fetch(`/api/items?q=${encodeURIComponent(searchQuery)}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSearchResults(data.items || []);
+        }
+      } catch (error) {
+        console.error('Error searching items:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchItems, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const generateListName = async () => {
+    try {
+      const response = await fetch('/api/lists/generate-name');
+      if (response.ok) {
+        const data = await response.json();
+        setListName(data.name);
+      }
+    } catch (error) {
+      console.error('Error generating list name:', error);
+      // Fallback to client-side generation
+      const date = new Date();
+      const day = date.getDate();
+      const month = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+      setListName(`${day} ${month} LIST`);
+    }
+  };
+
+  const handleBack = () => {
+    haptics.buttonTap();
+    router.push('/home');
+  };
+
+  const handleAddItem = (item: ListItem) => {
+    haptics.buttonTap();
+    setItems([...items, item]);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const handleSelectSearchResult = (result: SearchResultItem) => {
+    haptics.buttonTap();
+    setSelectedItem({
+      itemId: result.itemId,
+      itemName: result.itemName,
+      itemNameHindi: result.itemNameHindi,
+      itemNameMarathi: result.itemNameMarathi,
+      defaultQuantity: result.defaultQuantity,
+    });
+    setShowQuantitySelector(true);
+  };
+
+  const handleQuantityConfirm = (
+    quantity: { value: number; unit: string },
+    quantityType: 'weight' | 'money' | 'count'
+  ) => {
+    if (selectedItem) {
+      handleAddItem({
+        itemId: selectedItem.itemId,
+        itemName: selectedItem.itemName,
+        itemNameHindi: selectedItem.itemNameHindi,
+        itemNameMarathi: selectedItem.itemNameMarathi,
+        quantity,
+        quantityType,
+      });
+      setSelectedItem(null);
+    }
+  };
+
+  const handleCreateNewItem = (itemName: string) => {
+    haptics.buttonTap();
+    setNewItemName(itemName);
+    setShowItemCreationDialog(true);
+  };
+
+  const handleItemCreated = (item: {
+    itemName: string;
+    itemNameHindi?: string;
+    itemNameMarathi?: string;
+  }) => {
+    // After creating item details, show quantity selector
+    setSelectedItem({
+      itemName: item.itemName,
+      itemNameHindi: item.itemNameHindi,
+      itemNameMarathi: item.itemNameMarathi,
+      defaultQuantity: { value: 1, unit: 'items' },
+    });
+    setShowQuantitySelector(true);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    haptics.buttonTap();
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleSaveList = async () => {
+    if (items.length === 0) {
+      alert('Please add at least one item');
+      return;
+    }
+
+    haptics.buttonTap();
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/lists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: listName,
+          emoji,
+          items: items.map(item => ({
+            itemId: item.itemId || crypto.randomUUID(),
+            itemName: item.itemName,
+            itemNameHindi: item.itemNameHindi,
+            itemNameMarathi: item.itemNameMarathi,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      if (response.ok) {
+        haptics.success();
+        router.push('/home');
+      } else {
+        haptics.error();
+        alert('Failed to create list');
+      }
+    } catch (error) {
+      console.error('Error creating list:', error);
+      haptics.error();
+      alert('Error creating list');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-background border-b">
+        <div className="flex items-center gap-3 px-4 h-16">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11"
+            onClick={handleBack}
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-2 flex-1">
+            <button
+              className="text-2xl"
+              onClick={() => {
+                haptics.buttonTap();
+                // TODO: Open emoji picker
+                const emojis = ['🛒', '🥬', '🍎', '🥕', '🍞', '🥛'];
+                const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+                setEmoji(randomEmoji);
+              }}
+            >
+              {emoji}
+            </button>
+            <Input
+              value={listName}
+              onChange={(e) => setListName(e.target.value)}
+              className="text-lg font-semibold border-none shadow-none focus-visible:ring-0 px-2"
+              placeholder="List name"
+            />
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="flex-1 overflow-y-auto p-4 pb-24">
+        {/* Search/Add Items Section */}
+        <div className="mb-6">
+          <label className="text-sm font-medium mb-2 block">Add Items</label>
+          <div className="relative">
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search or add item..."
+              className="h-12"
+            />
+          </div>
+
+          {/* Search Results */}
+          {searchQuery && searchQuery.length >= 2 && (
+            <div className="mt-2 border rounded-lg bg-card overflow-hidden">
+              {isSearching ? (
+                <div className="p-4 text-center text-muted-foreground text-sm">
+                  Searching...
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div className="divide-y">
+                  {searchResults.map((result) => (
+                    <button
+                      key={result.itemId}
+                      className="w-full text-left p-3 hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSelectSearchResult(result)}
+                    >
+                      <div className="font-medium">{result.itemName}</div>
+                      {(result.itemNameHindi || result.itemNameMarathi) && (
+                        <div className="text-sm text-muted-foreground">
+                          {result.itemNameHindi}
+                          {result.itemNameHindi && result.itemNameMarathi && ' • '}
+                          {result.itemNameMarathi}
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Default: {result.defaultQuantity.value} {result.defaultQuantity.unit}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  className="w-full text-left p-3 hover:bg-muted/50 transition-colors"
+                  onClick={() => handleCreateNewItem(searchQuery)}
+                >
+                  <Plus className="inline h-4 w-4 mr-2" />
+                  <span className="font-medium">Create new item: "{searchQuery}"</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Items List */}
+        {items.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📋</div>
+            <p className="text-muted-foreground">No items added yet</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Start typing to search or add items
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium mb-2">
+              Items ({items.length})
+            </h3>
+            {items.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 border rounded-lg bg-card"
+              >
+                <div className="flex-1">
+                  <div className="font-medium">{item.itemName}</div>
+                  {item.itemNameHindi && (
+                    <div className="text-sm text-muted-foreground">
+                      {item.itemNameHindi}
+                    </div>
+                  )}
+                  <div className="text-sm text-muted-foreground">
+                    {item.quantity.value} {item.quantity.unit}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveItem(index)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Save Button */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+        <Button
+          className="w-full h-12 text-lg"
+          onClick={handleSaveList}
+          disabled={isLoading || items.length === 0}
+        >
+          <Save className="h-5 w-5 mr-2" />
+          {isLoading ? 'Saving...' : 'Save List'}
+        </Button>
+      </div>
+
+      {/* Item Creation Dialog */}
+      <ItemCreationDialog
+        isOpen={showItemCreationDialog}
+        onClose={() => {
+          setShowItemCreationDialog(false);
+          setNewItemName('');
+        }}
+        onConfirm={handleItemCreated}
+        initialName={newItemName}
+      />
+
+      {/* Quantity Selector Dialog */}
+      {selectedItem && (
+        <QuantitySelector
+          isOpen={showQuantitySelector}
+          onClose={() => {
+            setShowQuantitySelector(false);
+            setSelectedItem(null);
+          }}
+          onConfirm={handleQuantityConfirm}
+          itemName={selectedItem.itemName}
+          defaultQuantity={selectedItem.defaultQuantity}
+        />
+      )}
+    </div>
+  );
+}

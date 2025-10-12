@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Settings, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { haptics } from '@/lib/haptics';
 
 export default function HomePage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'my-lists' | 'to-buy'>('my-lists');
 
   const handleTabChange = (tab: 'my-lists' | 'to-buy') => {
@@ -21,8 +23,7 @@ export default function HomePage() {
 
   const handleCreateList = () => {
     haptics.buttonTap();
-    // TODO: Navigate to create list
-    console.log('Create list clicked');
+    router.push('/lists/create');
   };
 
   return (
