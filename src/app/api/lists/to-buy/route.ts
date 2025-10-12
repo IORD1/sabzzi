@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
 
     const db = await getSabzziDatabase();
     const listsCollection = db.collection('lists');
+    const usersCollection = db.collection('users');
 
     // Find all lists shared with this user
     const lists = await listsCollection
@@ -16,9 +17,38 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .toArray();
 
+    // Get creator names for all lists
+    const creatorIds = [...new Set(lists.map((list) => list.createdBy))];
+    const creators = await usersCollection
+      .find({ userId: { $in: creatorIds } })
+      .toArray();
+
+    const creatorMap = new Map(creators.map((user) => [user.userId, user.name]));
+
+    // Add computed fields for UI
+    const listsWithStats = lists.map((list) => {
+      const totalItems = list.items?.length || 0;
+      const boughtItems = list.items?.filter((item: any) => item.isBought).length || 0;
+      const creatorName = creatorMap.get(list.createdBy) || 'Unknown';
+
+      return {
+        listId: list.listId,
+        name: list.name,
+        emoji: list.emoji,
+        createdBy: list.createdBy,
+        creatorName,
+        sharedWith: list.sharedWith,
+        status: list.status,
+        createdAt: list.createdAt,
+        updatedAt: list.updatedAt,
+        totalItems,
+        boughtItems,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      lists,
+      lists: listsWithStats,
     });
   } catch (error) {
     console.error('Error fetching to-buy lists:', error);

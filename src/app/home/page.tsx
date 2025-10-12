@@ -1,14 +1,69 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Settings, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { haptics } from '@/lib/haptics';
+import { ListCard } from '@/components/list-card';
+
+interface ListSummary {
+  listId: string;
+  name: string;
+  emoji?: string;
+  totalItems: number;
+  boughtItems: number;
+  createdAt: string;
+  creatorName?: string;
+}
 
 export default function HomePage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'my-lists' | 'to-buy'>('my-lists');
+  const [myLists, setMyLists] = useState<ListSummary[]>([]);
+  const [toBuyLists, setToBuyLists] = useState<ListSummary[]>([]);
+  const [isLoadingMyLists, setIsLoadingMyLists] = useState(true);
+  const [isLoadingToBuy, setIsLoadingToBuy] = useState(true);
+
+  // Fetch My Lists
+  useEffect(() => {
+    const fetchMyLists = async () => {
+      setIsLoadingMyLists(true);
+      try {
+        const response = await fetch('/api/lists/my-lists');
+        if (response.ok) {
+          const data = await response.json();
+          setMyLists(data.lists || []);
+        }
+      } catch (error) {
+        console.error('Error fetching my lists:', error);
+      } finally {
+        setIsLoadingMyLists(false);
+      }
+    };
+
+    fetchMyLists();
+  }, []);
+
+  // Fetch To Buy Lists
+  useEffect(() => {
+    const fetchToBuyLists = async () => {
+      setIsLoadingToBuy(true);
+      try {
+        const response = await fetch('/api/lists/to-buy');
+        if (response.ok) {
+          const data = await response.json();
+          setToBuyLists(data.lists || []);
+        }
+      } catch (error) {
+        console.error('Error fetching to-buy lists:', error);
+      } finally {
+        setIsLoadingToBuy(false);
+      }
+    };
+
+    fetchToBuyLists();
+  }, []);
 
   const handleTabChange = (tab: 'my-lists' | 'to-buy') => {
     haptics.navigation();
@@ -76,7 +131,11 @@ export default function HomePage() {
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'my-lists' ? <MyListsTab /> : <ToBuyTab />}
+        {activeTab === 'my-lists' ? (
+          <MyListsTab lists={myLists} isLoading={isLoadingMyLists} router={router} />
+        ) : (
+          <ToBuyTab lists={toBuyLists} isLoading={isLoadingToBuy} router={router} />
+        )}
       </main>
 
       {/* Floating Action Button (only on My Lists tab) */}
@@ -93,33 +152,119 @@ export default function HomePage() {
   );
 }
 
-function MyListsTab() {
+function MyListsTab({
+  lists,
+  isLoading,
+  router,
+}: {
+  lists: ListSummary[];
+  isLoading: boolean;
+  router: any;
+}) {
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-muted-foreground">Loading your lists...</div>
+      </div>
+    );
+  }
+
+  if (lists.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">📝</div>
+          <h2 className="text-xl font-semibold mb-2">No lists yet</h2>
+          <p className="text-muted-foreground mb-6">
+            Create your first grocery list to get started
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Tap the + button to create a list
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="text-center py-12">
-        <div className="text-6xl mb-4">📝</div>
-        <h2 className="text-xl font-semibold mb-2">No lists yet</h2>
-        <p className="text-muted-foreground mb-6">
-          Create your first grocery list to get started
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Tap the + button to create a list
-        </p>
-      </div>
+      {lists.map((list) => (
+        <ListCard
+          key={list.listId}
+          listId={list.listId}
+          name={list.name}
+          emoji={list.emoji}
+          totalItems={list.totalItems}
+          boughtItems={list.boughtItems}
+          createdAt={list.createdAt}
+          onOpen={() => {
+            router.push(`/lists/${list.listId}`);
+          }}
+          onShare={() => {
+            // TODO: Implement share
+            console.log('Share list:', list.listId);
+          }}
+          onDuplicate={() => {
+            // TODO: Implement duplicate
+            console.log('Duplicate list:', list.listId);
+          }}
+          onEdit={() => {
+            router.push(`/lists/${list.listId}/edit`);
+          }}
+        />
+      ))}
     </div>
   );
 }
 
-function ToBuyTab() {
+function ToBuyTab({
+  lists,
+  isLoading,
+  router,
+}: {
+  lists: ListSummary[];
+  isLoading: boolean;
+  router: any;
+}) {
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-muted-foreground">Loading shared lists...</div>
+      </div>
+    );
+  }
+
+  if (lists.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">🛒</div>
+          <h2 className="text-xl font-semibold mb-2">No shared lists</h2>
+          <p className="text-muted-foreground">
+            Lists shared with you will appear here
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="text-center py-12">
-        <div className="text-6xl mb-4">🛒</div>
-        <h2 className="text-xl font-semibold mb-2">No shared lists</h2>
-        <p className="text-muted-foreground">
-          Lists shared with you will appear here
-        </p>
-      </div>
+      {lists.map((list) => (
+        <ListCard
+          key={list.listId}
+          listId={list.listId}
+          name={list.name}
+          emoji={list.emoji}
+          totalItems={list.totalItems}
+          boughtItems={list.boughtItems}
+          createdAt={list.createdAt}
+          creatorName={list.creatorName}
+          onOpen={() => {
+            router.push(`/lists/${list.listId}`);
+          }}
+        />
+      ))}
     </div>
   );
 }
