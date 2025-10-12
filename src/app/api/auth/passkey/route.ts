@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthDatabase, getSabzziDatabase } from '@/lib/mongodb';
+import { getSabzziDatabase } from '@/lib/mongodb';
 
 // Helper function to convert credential ID array to string for lookup
 function credentialIdToString(credentialId: number[]): string {
@@ -33,11 +33,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const authDb = await getAuthDatabase();
-    const sabzziDb = await getSabzziDatabase();
+    const db = await getSabzziDatabase();
 
-    const authCollection = authDb.collection('auth');
-    const usersCollection = sabzziDb.collection('users');
+    const authCollection = db.collection('auth');
+    const usersCollection = db.collection('users');
 
     const credentialIdString = credentialIdToString(credentialId);
 
@@ -108,8 +107,8 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { credentialId } = body;
 
-    const authDb = await getAuthDatabase();
-    const authCollection = authDb.collection('auth');
+    const db = await getSabzziDatabase();
+    const authCollection = db.collection('auth');
 
     const credentialIdString = credentialIdToString(credentialId);
 

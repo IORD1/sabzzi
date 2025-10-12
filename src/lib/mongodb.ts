@@ -40,11 +40,7 @@ export async function getDatabase(dbName: string): Promise<Db> {
   return client.db(dbName);
 }
 
-// Get specific databases for our app
-export async function getAuthDatabase(): Promise<Db> {
-  return getDatabase('auth');
-}
-
+// Get main database for our app
 export async function getSabzziDatabase(): Promise<Db> {
   return getDatabase('sabzzi');
 }
