@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSabzziDatabase } from '@/lib/mongodb';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get userId from session/auth
-    // For now, using the dev user
-    const userId = 'localhost-dev-user';
+    // Get userId from session
+    const session = await requireAuth();
+    const userId = session.userId;
 
     const db = await getSabzziDatabase();
     const listsCollection = db.collection('lists');

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureDevUser, isDevelopment } from '@/lib/dev-auth';
+import { setSessionCookie } from '@/lib/session';
 
 export async function POST() {
   if (!isDevelopment()) {
@@ -12,11 +13,14 @@ export async function POST() {
   try {
     const user = await ensureDevUser();
 
-    return NextResponse.json({
+    // Create session
+    const response = NextResponse.json({
       success: true,
       user,
       message: 'Dev user authenticated',
     });
+
+    return setSessionCookie(response, user.userId, user.name);
   } catch (error) {
     console.error('Dev auth error:', error);
     return NextResponse.json(

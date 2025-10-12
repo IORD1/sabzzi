@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSabzziDatabase } from '@/lib/mongodb';
+import { setSessionCookie } from '@/lib/session';
 
 // Helper function to convert credential ID array to string for lookup
 function credentialIdToString(credentialId: number[]): string {
@@ -86,12 +87,15 @@ export async function POST(request: NextRequest) {
 
     await usersCollection.insertOne(userRecord);
 
-    return NextResponse.json({
+    // Create session
+    const response = NextResponse.json({
       success: true,
       userId,
       name: name.trim(),
       message: 'Registration successful',
     });
+
+    return setSessionCookie(response, userId, name.trim());
   } catch (error) {
     console.error('Failed to register passkey:', error);
     return NextResponse.json(
@@ -135,11 +139,14 @@ export async function PUT(request: NextRequest) {
       }
     );
 
-    return NextResponse.json({
+    // Create session
+    const response = NextResponse.json({
       success: true,
       userId: user.userId,
       name: user.name,
     });
+
+    return setSessionCookie(response, user.userId, user.name);
   } catch (error) {
     console.error('Failed to authenticate:', error);
     return NextResponse.json(

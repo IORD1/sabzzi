@@ -9,12 +9,25 @@ import { haptics, getHapticPreference, setHapticPreference } from '@/lib/haptics
 export default function SettingsPage() {
   const router = useRouter();
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const [userName, setUserName] = useState('Dev User');
-  const userId = 'localhost-dev-user'; // TODO: Get from session/auth
+  const [userName, setUserName] = useState('Loading...');
+  const [userId, setUserId] = useState('');
 
   useEffect(() => {
     // Load haptics preference
     setHapticsEnabled(getHapticPreference());
+
+    // Load user session
+    fetch('/api/auth/session')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated) {
+          setUserName(data.user.name);
+          setUserId(data.user.userId);
+        }
+      })
+      .catch((error) => {
+        console.error('Error loading session:', error);
+      });
   }, []);
 
   const handleBack = () => {
@@ -32,18 +45,27 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (!confirm('Are you sure you want to logout?')) {
       return;
     }
 
     haptics.buttonTap();
 
-    // Clear any local storage
-    localStorage.clear();
+    try {
+      // Call logout API to clear session
+      await fetch('/api/auth/logout', { method: 'POST' });
 
-    // Redirect to login/landing page
-    router.push('/');
+      // Clear any local storage
+      localStorage.clear();
+
+      // Redirect to login/landing page
+      router.push('/');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      // Still redirect even if API call fails
+      router.push('/');
+    }
   };
 
   return (

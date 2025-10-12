@@ -24,8 +24,8 @@ export default function Home() {
 
   useEffect(() => {
     // Check if we're in development mode
-    const isDev = process.env.NODE_ENV === 'development' ||
-                  process.env.NEXT_PUBLIC_ENV === 'DEV';
+    // Only auto-login if explicitly in development
+    const isDev = process.env.NODE_ENV === 'development';
 
     setIsDevMode(isDev);
 

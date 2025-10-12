@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSabzziDatabase } from '@/lib/mongodb';
+import { requireAuth } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Get userId from session/auth
-    const userId = 'localhost-dev-user';
+    // Get userId from session
+    const session = await requireAuth();
+    const userId = session.userId;
 
     const body = await request.json();
     const { name, emoji, items } = body;
