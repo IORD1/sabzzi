@@ -31,7 +31,7 @@ export async function ensureDevUser() {
 
     if (!authUser) {
       // Create dev user in auth database
-      authUser = {
+      const authUserDoc = {
         userId: DEV_USER.userId,
         name: DEV_USER.name,
         passkey: {
@@ -43,7 +43,7 @@ export async function ensureDevUser() {
         updatedAt: new Date(),
       };
 
-      await authCollection.insertOne(authUser);
+      await authCollection.insertOne(authUserDoc);
       console.log('✅ Created dev user in auth database');
     }
 
@@ -53,7 +53,7 @@ export async function ensureDevUser() {
 
     if (!sabzziUser) {
       // Create dev user in sabzzi database
-      sabzziUser = {
+      const sabzziUserDoc = {
         userId: DEV_USER.userId,
         name: DEV_USER.name,
         myLists: [],
@@ -66,7 +66,7 @@ export async function ensureDevUser() {
         updatedAt: new Date(),
       };
 
-      await usersCollection.insertOne(sabzziUser);
+      await usersCollection.insertOne(sabzziUserDoc);
       console.log('✅ Created dev user in sabzzi database');
     }
 
