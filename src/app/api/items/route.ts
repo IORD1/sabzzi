@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSabzziDatabase } from '@/lib/mongodb';
 
-// GET /api/items - Search for items
+// GET /api/items - Search for items or get all items
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -10,17 +10,27 @@ export async function GET(request: NextRequest) {
     const db = await getSabzziDatabase();
     const itemsCollection = db.collection('items');
 
-    // Search across English, Hindi, and Marathi names
-    const items = await itemsCollection
-      .find({
-        $or: [
-          { itemName: { $regex: query, $options: 'i' } },
-          { itemNameHindi: { $regex: query, $options: 'i' } },
-          { itemNameMarathi: { $regex: query, $options: 'i' } },
-        ],
-      })
-      .limit(10)
-      .toArray();
+    let items;
+
+    if (query) {
+      // Search across English, Hindi, and Marathi names
+      items = await itemsCollection
+        .find({
+          $or: [
+            { itemName: { $regex: query, $options: 'i' } },
+            { itemNameHindi: { $regex: query, $options: 'i' } },
+            { itemNameMarathi: { $regex: query, $options: 'i' } },
+          ],
+        })
+        .limit(20)
+        .toArray();
+    } else {
+      // Return all items, sorted alphabetically
+      items = await itemsCollection
+        .find({})
+        .sort({ itemName: 1 })
+        .toArray();
+    }
 
     return NextResponse.json({
       success: true,
@@ -44,8 +54,9 @@ export async function GET(request: NextRequest) {
 // POST /api/items - Create a new item
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Get userId from session/auth
-    const userId = 'localhost-dev-user';
+    const { requireAuth } = await import('@/lib/session');
+    const session = await requireAuth();
+    const userId = session.userId;
 
     const body = await request.json();
     const { itemName, itemNameHindi, itemNameMarathi, defaultQuantity } = body;

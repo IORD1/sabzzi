@@ -38,8 +38,9 @@ export default function CreateListPage() {
   const [emoji, setEmoji] = useState('🛒');
   const [items, setItems] = useState<ListItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [allAvailableItems, setAllAvailableItems] = useState<SearchResultItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<SearchResultItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showQuantitySelector, setShowQuantitySelector] = useState(false);
   const [showItemCreationDialog, setShowItemCreationDialog] = useState(false);
@@ -52,36 +53,44 @@ export default function CreateListPage() {
     defaultQuantity?: { value: number; unit: string };
   } | null>(null);
 
-  // Generate auto list name on mount
+  // Load all items and generate list name on mount
   useEffect(() => {
     generateListName();
+    loadAllItems();
   }, []);
 
-  // Search items when query changes
+  // Filter items when search query changes
   useEffect(() => {
-    const searchItems = async () => {
-      if (searchQuery.length < 2) {
-        setSearchResults([]);
-        return;
-      }
+    if (!searchQuery) {
+      setFilteredItems(allAvailableItems);
+      return;
+    }
 
-      setIsSearching(true);
-      try {
-        const response = await fetch(`/api/items?q=${encodeURIComponent(searchQuery)}`);
-        if (response.ok) {
-          const data = await response.json();
-          setSearchResults(data.items || []);
-        }
-      } catch (error) {
-        console.error('Error searching items:', error);
-      } finally {
-        setIsSearching(false);
-      }
-    };
+    const query = searchQuery.toLowerCase();
+    const filtered = allAvailableItems.filter(
+      (item) =>
+        item.itemName.toLowerCase().includes(query) ||
+        item.itemNameHindi?.toLowerCase().includes(query) ||
+        item.itemNameMarathi?.toLowerCase().includes(query)
+    );
+    setFilteredItems(filtered);
+  }, [searchQuery, allAvailableItems]);
 
-    const timeoutId = setTimeout(searchItems, 300);
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  const loadAllItems = async () => {
+    setIsLoadingItems(true);
+    try {
+      const response = await fetch('/api/items');
+      if (response.ok) {
+        const data = await response.json();
+        setAllAvailableItems(data.items || []);
+        setFilteredItems(data.items || []);
+      }
+    } catch (error) {
+      console.error('Error loading items:', error);
+    } finally {
+      setIsLoadingItems(false);
+    }
+  };
 
   const generateListName = async () => {
     try {
@@ -109,10 +118,9 @@ export default function CreateListPage() {
     haptics.buttonTap();
     setItems([...items, item]);
     setSearchQuery('');
-    setSearchResults([]);
   };
 
-  const handleSelectSearchResult = (result: SearchResultItem) => {
+  const handleSelectItem = (result: SearchResultItem) => {
     haptics.buttonTap();
     setSelectedItem({
       itemId: result.itemId,
@@ -250,56 +258,57 @@ export default function CreateListPage() {
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto p-4 pb-24">
-        {/* Search/Add Items Section */}
-        <div className="mb-6">
-          <label className="text-sm font-medium mb-2 block">Add Items</label>
-          <div className="relative">
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search or add item..."
-              className="h-12"
-            />
-          </div>
+        {/* Search Section */}
+        <div className="mb-4">
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search items..."
+            className="h-12"
+          />
+        </div>
 
-          {/* Search Results */}
-          {searchQuery && searchQuery.length >= 2 && (
-            <div className="mt-2 border rounded-lg bg-card overflow-hidden">
-              {isSearching ? (
-                <div className="p-4 text-center text-muted-foreground text-sm">
-                  Searching...
-                </div>
-              ) : searchResults.length > 0 ? (
-                <div className="divide-y">
-                  {searchResults.map((result) => (
-                    <button
-                      key={result.itemId}
-                      className="w-full text-left p-3 hover:bg-muted/50 transition-colors"
-                      onClick={() => handleSelectSearchResult(result)}
-                    >
-                      <div className="font-medium">{result.itemName}</div>
-                      {(result.itemNameHindi || result.itemNameMarathi) && (
-                        <div className="text-sm text-muted-foreground">
-                          {result.itemNameHindi}
-                          {result.itemNameHindi && result.itemNameMarathi && ' • '}
-                          {result.itemNameMarathi}
-                        </div>
-                      )}
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Default: {result.defaultQuantity.value} {result.defaultQuantity.unit}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
+        {/* Available Items as Tags */}
+        <div className="mb-6">
+          <label className="text-sm font-medium mb-3 block">
+            Available Items ({filteredItems.length})
+          </label>
+          {isLoadingItems ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Loading items...
+            </div>
+          ) : filteredItems.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {filteredItems.map((item) => (
                 <button
-                  className="w-full text-left p-3 hover:bg-muted/50 transition-colors"
-                  onClick={() => handleCreateNewItem(searchQuery)}
+                  key={item.itemId}
+                  onClick={() => handleSelectItem(item)}
+                  className="inline-flex items-center px-4 py-2 rounded-full border-2 border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-300 transition-colors text-sm font-medium"
                 >
-                  <Plus className="inline h-4 w-4 mr-2" />
-                  <span className="font-medium">Create new item: "{searchQuery}"</span>
+                  {item.itemName}
+                  {item.itemNameHindi && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {item.itemNameHindi}
+                    </span>
+                  )}
                 </button>
-              )}
+              ))}
+            </div>
+          ) : searchQuery ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-3">No items found for "{searchQuery}"</p>
+              <Button
+                variant="outline"
+                onClick={() => handleCreateNewItem(searchQuery)}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Create new item: "{searchQuery}"
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No items available
             </div>
           )}
         </div>
@@ -310,7 +319,7 @@ export default function CreateListPage() {
             <div className="text-6xl mb-4">📋</div>
             <p className="text-muted-foreground">No items added yet</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Start typing to search or add items
+              Click on an item tag above to add it to your list
             </p>
           </div>
         ) : (
