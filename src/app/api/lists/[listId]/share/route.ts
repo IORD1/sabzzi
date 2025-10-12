@@ -32,15 +32,7 @@ export async function POST(
         { status: 404 }
       );
     }
-
-    // Check if user is the creator
-    if (list.createdBy !== userId) {
-      return NextResponse.json(
-        { error: 'Not authorized to share this list' },
-        { status: 403 }
-      );
-    }
-
+    
     // Get current shared users
     const currentSharedWith = list.sharedWith || [];
 
