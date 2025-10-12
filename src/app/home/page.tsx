@@ -178,7 +178,7 @@ export default function HomePage() {
           >
             My Lists
             {activeTab === 'my-lists' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-700" />
+              <div className="absolute bottom-0 pb-10 left-0 right-0 h-0.5 bg-green-700" />
             )}
           </button>
           <button
@@ -191,7 +191,7 @@ export default function HomePage() {
           >
             To Buy
             {activeTab === 'to-buy' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-700" />
+              <div className="absolute bottom-0 pb-10 left-0 right-0 h-0.5 bg-green-700" />
             )}
           </button>
         </div>

@@ -362,7 +362,7 @@ export default function CreateListPage() {
       </main>
 
       {/* Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-10 bg-background border-t">
         <Button
           className="w-full h-12 text-lg"
           onClick={handleSaveList}
