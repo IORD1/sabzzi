@@ -55,6 +55,14 @@ export async function deleteSession(): Promise<void> {
 }
 
 /**
+ * Get userId from session (returns null if not authenticated)
+ */
+export async function getSessionUserId(request?: NextRequest): Promise<string | null> {
+  const session = await getSession();
+  return session?.userId || null;
+}
+
+/**
  * Get userId from session, throw error if not authenticated
  */
 export async function requireAuth(): Promise<SessionData> {
