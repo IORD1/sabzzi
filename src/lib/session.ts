@@ -15,10 +15,12 @@ export async function createSession(userId: string, name: string): Promise<void>
   const sessionData: SessionData = { userId, name };
   const cookieStore = await cookies();
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   cookieStore.set(SESSION_COOKIE_NAME, JSON.stringify(sessionData), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'strict' : 'lax', // 'strict' for better security in production
     maxAge: 60 * 60 * 24 * 30, // 30 days
     path: '/',
   });
@@ -75,10 +77,12 @@ export function setSessionCookie(
 ): NextResponse {
   const sessionData: SessionData = { userId, name };
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   response.cookies.set(SESSION_COOKIE_NAME, JSON.stringify(sessionData), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'strict' : 'lax', // 'strict' for better security in production
     maxAge: 60 * 60 * 24 * 30, // 30 days
     path: '/',
   });

@@ -27,10 +27,41 @@ export default function HomePage() {
   const [isLoadingToBuy, setIsLoadingToBuy] = useState(true);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
-  const currentUserId = 'localhost-dev-user'; // TODO: Get from session/auth
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/check');
+        if (!response.ok) {
+          // Not authenticated, redirect to login
+          router.replace('/');
+          return;
+        }
+        const data = await response.json();
+        if (data.authenticated) {
+          setCurrentUserId(data.userId);
+        } else {
+          router.replace('/');
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        router.replace('/');
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   // Fetch My Lists
   useEffect(() => {
+    // Don't fetch lists until auth check is complete
+    if (isCheckingAuth || !currentUserId) return;
+
     const fetchMyLists = async () => {
       setIsLoadingMyLists(true);
       try {
@@ -47,10 +78,13 @@ export default function HomePage() {
     };
 
     fetchMyLists();
-  }, []);
+  }, [isCheckingAuth, currentUserId]);
 
   // Fetch To Buy Lists
   useEffect(() => {
+    // Don't fetch lists until auth check is complete
+    if (isCheckingAuth || !currentUserId) return;
+
     const fetchToBuyLists = async () => {
       setIsLoadingToBuy(true);
       try {
@@ -67,7 +101,7 @@ export default function HomePage() {
     };
 
     fetchToBuyLists();
-  }, []);
+  }, [isCheckingAuth, currentUserId]);
 
   const handleTabChange = (tab: 'my-lists' | 'to-buy') => {
     haptics.navigation();
@@ -102,6 +136,18 @@ export default function HomePage() {
       console.error('Error refreshing lists:', error);
     }
   };
+
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

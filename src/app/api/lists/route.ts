@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     const db = await getSabzziDatabase();
     const listsCollection = db.collection('lists');
     const usersCollection = db.collection('users');
+    const itemsCollection = db.collection('items');
 
     // Generate list ID
     const listId = crypto.randomUUID();
@@ -60,6 +61,22 @@ export async function POST(request: NextRequest) {
         $set: { updatedAt: new Date() },
       }
     );
+
+    // Increment usage count for each item that exists in items collection
+    const itemIds = items
+      .map((item: any) => item.itemId)
+      .filter((id: string) => id); // Only items with IDs (from database)
+
+    if (itemIds.length > 0) {
+      await itemsCollection.updateMany(
+        { itemId: { $in: itemIds } },
+        {
+          $inc: { usageCount: 1 },
+          $set: { updatedAt: new Date() },
+        }
+      );
+      console.log(`✅ Incremented usage count for ${itemIds.length} items`);
+    }
 
     return NextResponse.json({
       success: true,

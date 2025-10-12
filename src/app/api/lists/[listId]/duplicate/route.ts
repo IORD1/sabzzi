@@ -13,6 +13,7 @@ export async function POST(
     const db = await getSabzziDatabase();
     const listsCollection = db.collection('lists');
     const usersCollection = db.collection('users');
+    const itemsCollection = db.collection('items');
 
     // Find the original list
     const originalList = await listsCollection.findOne({ listId });
@@ -90,6 +91,22 @@ export async function POST(
         $set: { updatedAt: new Date() },
       }
     );
+
+    // Increment usage count for each item
+    const itemIds = duplicatedList.items
+      .map((item: any) => item.itemId)
+      .filter((id: string) => id);
+
+    if (itemIds.length > 0) {
+      await itemsCollection.updateMany(
+        { itemId: { $in: itemIds } },
+        {
+          $inc: { usageCount: 1 },
+          $set: { updatedAt: new Date() },
+        }
+      );
+      console.log(`✅ Incremented usage count for ${itemIds.length} items (duplicate list)`);
+    }
 
     return NextResponse.json({
       success: true,

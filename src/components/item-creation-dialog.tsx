@@ -31,28 +31,88 @@ export function ItemCreationDialog({
   const [itemName, setItemName] = useState(initialName);
   const [itemNameHindi, setItemNameHindi] = useState('');
   const [itemNameMarathi, setItemNameMarathi] = useState('');
+  const [defaultValue, setDefaultValue] = useState('1');
+  const [defaultUnit, setDefaultUnit] = useState('items');
   const [saveToDatabase, setSaveToDatabase] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!itemName.trim()) {
       haptics.error();
       alert('Item name is required');
       return;
     }
 
-    haptics.success();
-    onConfirm({
-      itemName: itemName.trim(),
-      itemNameHindi: itemNameHindi.trim() || undefined,
-      itemNameMarathi: itemNameMarathi.trim() || undefined,
-    });
-    onClose();
+    setIsLoading(true);
+
+    try {
+      // Save to database if checkbox is checked
+      if (saveToDatabase) {
+        const response = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            itemName: itemName.trim(),
+            itemNameHindi: itemNameHindi.trim() || undefined,
+            itemNameMarathi: itemNameMarathi.trim() || undefined,
+            defaultQuantity: {
+              value: parseFloat(defaultValue) || 1,
+              unit: defaultUnit,
+            },
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          console.log('✅ Item saved to database:', data);
+          haptics.success();
+          onConfirm({
+            itemName: itemName.trim(),
+            itemNameHindi: itemNameHindi.trim() || undefined,
+            itemNameMarathi: itemNameMarathi.trim() || undefined,
+          });
+          onClose();
+        } else if (response.status === 409) {
+          // Item already exists - that's okay, still continue
+          console.log('⚠️ Item already exists, continuing anyway');
+          haptics.success();
+          onConfirm({
+            itemName: itemName.trim(),
+            itemNameHindi: itemNameHindi.trim() || undefined,
+            itemNameMarathi: itemNameMarathi.trim() || undefined,
+          });
+          onClose();
+        } else {
+          console.error('❌ Failed to save item:', data);
+          haptics.error();
+          alert(data.error || 'Failed to save item to database');
+        }
+      } else {
+        // Just add to list without saving to database
+        haptics.success();
+        onConfirm({
+          itemName: itemName.trim(),
+          itemNameHindi: itemNameHindi.trim() || undefined,
+          itemNameMarathi: itemNameMarathi.trim() || undefined,
+        });
+        onClose();
+      }
+    } catch (error) {
+      console.error('❌ Error saving item:', error);
+      haptics.error();
+      alert('Error saving item. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
     setItemName(initialName);
     setItemNameHindi('');
     setItemNameMarathi('');
+    setDefaultValue('1');
+    setDefaultUnit('items');
     onClose();
   };
 
@@ -107,6 +167,54 @@ export function ItemCreationDialog({
             />
           </div>
 
+          {/* Default Quantity */}
+          {saveToDatabase && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Default Amount/Quantity
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  value={defaultValue}
+                  onChange={(e) => setDefaultValue(e.target.value)}
+                  placeholder="1"
+                  className="h-11 flex-1"
+                  min="0.1"
+                  step="0.1"
+                />
+                <select
+                  value={defaultUnit}
+                  onChange={(e) => setDefaultUnit(e.target.value)}
+                  className="h-11 px-3 rounded-md border border-input bg-background flex-1"
+                >
+                  <optgroup label="Count">
+                    <option value="items">items</option>
+                    <option value="pcs">pcs</option>
+                    <option value="dozen">dozen</option>
+                  </optgroup>
+                  <optgroup label="Weight">
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="lb">lb</option>
+                  </optgroup>
+                  <optgroup label="Volume">
+                    <option value="L">L</option>
+                    <option value="mL">mL</option>
+                    <option value="gal">gal</option>
+                  </optgroup>
+                  <optgroup label="Currency">
+                    <option value="₹">₹ (Rupees)</option>
+                    <option value="$">$ (Dollars)</option>
+                  </optgroup>
+                </select>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                This will be suggested when adding this item to lists
+              </p>
+            </div>
+          )}
+
           {/* Save to database checkbox */}
           <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
             <input
@@ -139,9 +247,9 @@ export function ItemCreationDialog({
             <Button
               className="flex-1 h-11"
               onClick={handleConfirm}
-              disabled={!itemName.trim()}
+              disabled={!itemName.trim() || isLoading}
             >
-              Continue
+              {isLoading ? 'Saving...' : 'Continue'}
             </Button>
           </div>
         </div>

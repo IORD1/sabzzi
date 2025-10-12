@@ -30,6 +30,7 @@ interface SearchResultItem {
     value: number;
     unit: string;
   };
+  usageCount?: number;
 }
 
 export default function CreateListPage() {
@@ -155,11 +156,14 @@ export default function CreateListPage() {
     setShowItemCreationDialog(true);
   };
 
-  const handleItemCreated = (item: {
+  const handleItemCreated = async (item: {
     itemName: string;
     itemNameHindi?: string;
     itemNameMarathi?: string;
   }) => {
+    // Refresh the items list to include the newly created item
+    await loadAllItems();
+
     // After creating item details, show quantity selector
     setSelectedItem({
       itemName: item.itemName,

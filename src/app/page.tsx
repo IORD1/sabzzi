@@ -147,12 +147,14 @@ export default function Home() {
       const data = await response.json();
 
       if (data.success) {
+        console.log('✅ Registration successful:', data);
         alert(`Welcome ${data.name}! Your account has been created.`);
         setShowNameDialog(false);
         setPendingCredential(null);
         setUserName('');
         router.push('/home');
       } else {
+        console.error('❌ Registration failed:', data);
         alert(data.error || 'Failed to register');
       }
     } catch (error) {
@@ -171,6 +173,7 @@ export default function Home() {
       const assertion = (await navigator.credentials.get({
         publicKey: {
           challenge: new Uint8Array(16),
+          rpId: window.location.hostname, // Must match registration
           userVerification: 'required',
           timeout: 60000,
         },
@@ -190,15 +193,26 @@ export default function Home() {
         const data = await response.json();
 
         if (data.success) {
+          console.log('✅ Login successful:', data);
           alert(`Welcome back, ${data.name}!`);
           router.push('/home');
         } else {
-          alert('User not found. Please register first.');
+          console.error('❌ Login failed:', data);
+          alert(data.error || 'User not found. Please register first.');
         }
       }
-    } catch (error) {
-      console.error('Error authenticating with passkey:', error);
-      alert('Failed to authenticate. Please try again.');
+    } catch (error: any) {
+      console.error('❌ Error authenticating with passkey:', error);
+
+      // Provide more helpful error messages
+      let errorMessage = 'Failed to authenticate. Please try again.';
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Authentication was cancelled or timed out.';
+      } else if (error.name === 'InvalidStateError') {
+        errorMessage = 'No passkey found. Please register first.';
+      }
+
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }

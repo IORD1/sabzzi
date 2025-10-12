@@ -25,10 +25,10 @@ export async function GET(request: NextRequest) {
         .limit(20)
         .toArray();
     } else {
-      // Return all items, sorted alphabetically
+      // Return all items, sorted by usage count (most used first), then alphabetically
       items = await itemsCollection
         .find({})
-        .sort({ itemName: 1 })
+        .sort({ usageCount: -1, itemName: 1 })
         .toArray();
     }
 
@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
         itemNameHindi: item.itemNameHindi,
         itemNameMarathi: item.itemNameMarathi,
         defaultQuantity: item.defaultQuantity,
+        usageCount: item.usageCount || 0,
       })),
     });
   } catch (error) {
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
         value: 1,
         unit: 'items',
       },
+      usageCount: 0, // Initialize usage count
       createdBy: userId,
       createdAt: new Date(),
       updatedAt: new Date(),
