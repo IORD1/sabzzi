@@ -1,3 +1,6 @@
+// MongoDB-based challenge storage import
+import { getSabzziDatabase } from './mongodb';
+
 // WebAuthn configuration
 export const rpName = 'Sabzzi - Grocery Tracker';
 
@@ -44,39 +47,65 @@ if (typeof window === 'undefined') {
   });
 }
 
-// In-memory challenge storage (in production, use Redis or similar)
-const challenges = new Map<string, { challenge: string; timestamp: number }>();
-
+// MongoDB-based challenge storage (for serverless environments like Vercel)
 // Clean up old challenges (older than 5 minutes)
 const CHALLENGE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
-export function storeChallenge(userId: string, challenge: string) {
-  challenges.set(userId, {
-    challenge,
-    timestamp: Date.now(),
-  });
+export async function storeChallenge(userId: string, challenge: string) {
+  try {
+    const db = await getSabzziDatabase();
+    const challengesCollection = db.collection('passkey_challenges');
 
-  // Clean up old challenges
-  for (const [id, data] of challenges.entries()) {
-    if (Date.now() - data.timestamp > CHALLENGE_TIMEOUT) {
-      challenges.delete(id);
-    }
+    // Store the challenge with timestamp
+    await challengesCollection.updateOne(
+      { userId },
+      {
+        $set: {
+          challenge,
+          timestamp: new Date(),
+          expiresAt: new Date(Date.now() + CHALLENGE_TIMEOUT),
+        },
+      },
+      { upsert: true }
+    );
+
+    // Clean up old challenges (optional, can also use MongoDB TTL index)
+    await challengesCollection.deleteMany({
+      expiresAt: { $lt: new Date() },
+    });
+  } catch (error) {
+    console.error('Error storing challenge:', error);
+    throw error;
   }
 }
 
-export function getChallenge(userId: string): string | null {
-  const data = challenges.get(userId);
-  if (!data) return null;
+export async function getChallenge(userId: string): Promise<string | null> {
+  try {
+    const db = await getSabzziDatabase();
+    const challengesCollection = db.collection('passkey_challenges');
 
-  // Check if challenge is expired
-  if (Date.now() - data.timestamp > CHALLENGE_TIMEOUT) {
-    challenges.delete(userId);
+    const data = await challengesCollection.findOne({ userId });
+    if (!data) return null;
+
+    // Check if challenge is expired
+    if (data.expiresAt < new Date()) {
+      await challengesCollection.deleteOne({ userId });
+      return null;
+    }
+
+    return data.challenge;
+  } catch (error) {
+    console.error('Error getting challenge:', error);
     return null;
   }
-
-  return data.challenge;
 }
 
-export function deleteChallenge(userId: string) {
-  challenges.delete(userId);
+export async function deleteChallenge(userId: string) {
+  try {
+    const db = await getSabzziDatabase();
+    const challengesCollection = db.collection('passkey_challenges');
+    await challengesCollection.deleteOne({ userId });
+  } catch (error) {
+    console.error('Error deleting challenge:', error);
+  }
 }

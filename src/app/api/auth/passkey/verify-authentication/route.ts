@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const { tempUserId, credential } = body;
 
     // Get stored challenge
-    const expectedChallenge = getChallenge(tempUserId);
+    const expectedChallenge = await getChallenge(tempUserId);
     if (!expectedChallenge) {
       return NextResponse.json(
         { success: false, error: 'Challenge expired or not found' },
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      deleteChallenge(tempUserId);
+      await deleteChallenge(tempUserId);
       return NextResponse.json(
         { success: false, error: 'User not found with this passkey' },
         { status: 404 }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!verification.verified) {
-      deleteChallenge(tempUserId);
+      await deleteChallenge(tempUserId);
       return NextResponse.json(
         { success: false, error: 'Authentication verification failed' },
         { status: 400 }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete the challenge
-    deleteChallenge(tempUserId);
+    await deleteChallenge(tempUserId);
 
     // Update counter and last login
     await authCollection.updateOne(

@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Store the challenge
-    storeChallenge(tempUserId, options.challenge);
+    await storeChallenge(tempUserId, options.challenge);
 
     return NextResponse.json({
       success: true,

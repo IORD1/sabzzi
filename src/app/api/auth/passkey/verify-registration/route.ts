@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Get stored challenge
-    const expectedChallenge = getChallenge(tempUserId);
+    const expectedChallenge = await getChallenge(tempUserId);
     if (!expectedChallenge) {
       return NextResponse.json(
         { success: false, error: 'Challenge expired or not found' },
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!verification.verified || !verification.registrationInfo) {
-      deleteChallenge(tempUserId);
+      await deleteChallenge(tempUserId);
       return NextResponse.json(
         { success: false, error: 'Registration verification failed' },
         { status: 400 }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete the challenge
-    deleteChallenge(tempUserId);
+    await deleteChallenge(tempUserId);
 
     const { credential: credentialData } = verification.registrationInfo;
 
