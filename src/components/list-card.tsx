@@ -97,8 +97,8 @@ export function ListCard({
               onShare();
             }}
           >
-            <Share2 className="h-4 w-4 mr-2" />
-            Share
+            <Share2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Share</span>
           </Button>
         )}
         {onDuplicate && (
@@ -111,8 +111,8 @@ export function ListCard({
               onDuplicate();
             }}
           >
-            <Copy className="h-4 w-4 mr-2" />
-            Duplicate
+            <Copy className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Duplicate</span>
           </Button>
         )}
         {onEdit && (
@@ -125,8 +125,8 @@ export function ListCard({
               onEdit();
             }}
           >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
+            <Edit className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Edit</span>
           </Button>
         )}
       </div>

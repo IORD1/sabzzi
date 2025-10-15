@@ -369,11 +369,7 @@ export default function ListDetailPage() {
 
           {showComments && (
             <div className="space-y-4">
-              {comments.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No comments yet. Be the first to comment!
-                </p>
-              ) : (
+              {comments.length === 0 ? null : (
                 <div className="space-y-3">
                   {comments.map((comment) => (
                     <div
@@ -447,24 +443,24 @@ export default function ListDetailPage() {
               setShowShareDialog(true);
             }}
           >
-            <Share2 className="h-4 w-4 mr-2" />
-            Share
+            <Share2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Share</span>
           </Button>
           <Button
             variant="outline"
             className="h-12"
             onClick={handleDuplicate}
           >
-            <Copy className="h-4 w-4 mr-2" />
-            Duplicate
+            <Copy className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Duplicate</span>
           </Button>
           <Button
             variant="outline"
             className="h-12 text-destructive hover:text-destructive"
             onClick={handleDelete}
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
+            <Trash2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Delete</span>
           </Button>
         </div>
       </div>
