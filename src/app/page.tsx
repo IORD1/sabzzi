@@ -74,26 +74,12 @@ export default function Home() {
       const userId = new Uint8Array(16);
       crypto.getRandomValues(userId);
 
-      // Step 3: Get the proper rpId (domain without port for Vercel)
-      const getRpId = () => {
-        const hostname = window.location.hostname;
-        // For localhost, use 'localhost', for Vercel, use full hostname
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          return 'localhost';
-        }
-        // For Vercel or production, use the full hostname
-        return hostname;
-      };
-
-      const rpId = getRpId();
-      console.log('🔐 Using rpId:', rpId);
-
       // Step 3: Create WebAuthn credential
       const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
         challenge: new Uint8Array(16), // Random challenge
         rp: {
           name: 'Sabzzi - Grocery Tracker',
-          id: rpId,
+          id: window.location.hostname,
         },
         user: {
           id: userId,
@@ -198,25 +184,11 @@ export default function Home() {
     try {
       setIsLoading(true);
 
-      // Get the proper rpId (must match registration)
-      const getRpId = () => {
-        const hostname = window.location.hostname;
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          return 'localhost';
-        }
-        return hostname;
-      };
-
-      const rpId = getRpId();
-      console.log('🔐 Using rpId for login:', rpId);
-
       // Step 1: Request authentication from device
       const assertion = (await navigator.credentials.get({
         publicKey: {
           challenge: new Uint8Array(16),
-          rpId: rpId, // Must match registration
           userVerification: 'required',
-          timeout: 60000,
         },
       })) as PublicKeyCredential;
 
