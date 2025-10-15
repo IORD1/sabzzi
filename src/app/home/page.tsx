@@ -34,7 +34,7 @@ export default function HomePage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/check');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/auth/check`);
         if (!response.ok) {
           // Not authenticated, redirect to login
           router.replace('/');
@@ -65,7 +65,7 @@ export default function HomePage() {
     const fetchMyLists = async () => {
       setIsLoadingMyLists(true);
       try {
-        const response = await fetch('/api/lists/my-lists');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/my-lists`);
         if (response.ok) {
           const data = await response.json();
           setMyLists(data.lists || []);
@@ -88,7 +88,7 @@ export default function HomePage() {
     const fetchToBuyLists = async () => {
       setIsLoadingToBuy(true);
       try {
-        const response = await fetch('/api/lists/to-buy');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/to-buy`);
         if (response.ok) {
           const data = await response.json();
           setToBuyLists(data.lists || []);
@@ -121,13 +121,13 @@ export default function HomePage() {
   const refreshLists = async () => {
     // Refresh both tabs
     try {
-      const myListsResponse = await fetch('/api/lists/my-lists');
+      const myListsResponse = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/my-lists`);
       if (myListsResponse.ok) {
         const data = await myListsResponse.json();
         setMyLists(data.lists || []);
       }
 
-      const toBuyResponse = await fetch('/api/lists/to-buy');
+      const toBuyResponse = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/to-buy`);
       if (toBuyResponse.ok) {
         const data = await toBuyResponse.json();
         setToBuyLists(data.lists || []);

@@ -16,6 +16,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { tempUserId, name, credential } = body;
 
+    console.log('🔐 Verify Registration - Configuration:', {
+      rpID,
+      expectedOrigin,
+      env: process.env.NODE_ENV,
+      NEXT_PUBLIC_RP_ID: process.env.NEXT_PUBLIC_RP_ID,
+      NEXT_PUBLIC_ORIGIN: process.env.NEXT_PUBLIC_ORIGIN,
+      VERCEL_URL: process.env.VERCEL_URL,
+      NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
+    });
+
     // Get stored challenge
     const expectedChallenge = getChallenge(tempUserId);
     if (!expectedChallenge) {
@@ -24,6 +34,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    console.log('🔐 Attempting to verify registration with:', {
+      expectedRPID: rpID,
+      expectedOrigin,
+      hasCredential: !!credential,
+    });
 
     // Verify the registration response
     const verification = await verifyRegistrationResponse({
@@ -113,9 +129,19 @@ export async function POST(request: NextRequest) {
 
     return setSessionCookie(response, userId, name.trim());
   } catch (error) {
-    console.error('Error verifying registration:', error);
+    console.error('❌ Error verifying registration:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      rpID,
+      expectedOrigin,
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to verify registration' },
+      {
+        success: false,
+        error: 'Failed to verify registration',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

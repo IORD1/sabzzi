@@ -38,7 +38,7 @@ export default function Home() {
 
   const handleDevAuth = async () => {
     try {
-      const response = await fetch('/api/dev-auth', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/dev-auth`, {
         method: 'POST',
       });
 
@@ -73,9 +73,19 @@ export default function Home() {
       setIsLoading(true);
       setShowNameDialog(false);
 
+      // Get expected configuration from environment
+      const expectedRpId = process.env.NEXT_PUBLIC_RP_ID;
+      const expectedOrigin = process.env.NEXT_PUBLIC_ORIGIN;
+
+      console.log('🔐 Client-side WebAuthn config:', {
+        expectedRpId,
+        expectedOrigin,
+        currentOrigin: window.location.origin,
+      });
+
       // Step 1: Get registration options from server
       const optionsResponse = await fetch(
-        '/api/auth/passkey/generate-registration-options',
+        `${process.env.NEXT_PUBLIC_ORIGIN}/api/auth/passkey/generate-registration-options`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -92,12 +102,33 @@ export default function Home() {
         return;
       }
 
+      console.log('🔐 Registration options received:', {
+        rpId: optionsData.options?.rp?.id,
+        rpName: optionsData.options?.rp?.name,
+        userName: optionsData.options?.user?.name,
+        hasChallenge: !!optionsData.options?.challenge,
+      });
+
+      // Validate RP ID matches expected configuration
+      if (expectedRpId && optionsData.options?.rp?.id !== expectedRpId) {
+        console.warn('⚠️ RP ID mismatch!', {
+          expected: expectedRpId,
+          received: optionsData.options?.rp?.id,
+        });
+      }
+
       // Step 2: Start WebAuthn registration (this shows biometric prompt)
       const credential = await startRegistration(optionsData.options);
 
+      console.log('✅ Credential created successfully:', {
+        credentialId: credential.id,
+        type: credential.type,
+        hasResponse: !!credential.response,
+      });
+
       // Step 3: Send credential to server for verification
       const verifyResponse = await fetch(
-        '/api/auth/passkey/verify-registration',
+        `${process.env.NEXT_PUBLIC_ORIGIN}/api/auth/passkey/verify-registration`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -111,6 +142,12 @@ export default function Home() {
 
       const verifyData = await verifyResponse.json();
 
+      console.log('🔐 Verification response:', {
+        success: verifyData.success,
+        error: verifyData.error,
+        details: verifyData.details,
+      });
+
       if (verifyData.success) {
         console.log('✅ Registration successful:', verifyData);
         alert(`Welcome ${verifyData.name}! Your account has been created.`);
@@ -118,7 +155,10 @@ export default function Home() {
         setPin('');
         router.push('/home');
       } else {
-        alert(verifyData.error || 'Failed to verify registration');
+        const errorMsg = verifyData.details
+          ? `${verifyData.error}\n\nDetails: ${verifyData.details}`
+          : verifyData.error || 'Failed to verify registration';
+        alert(errorMsg);
         setShowNameDialog(true);
       }
     } catch (error: any) {
@@ -146,7 +186,7 @@ export default function Home() {
 
       // Step 1: Get authentication options from server
       const optionsResponse = await fetch(
-        '/api/auth/passkey/generate-authentication-options',
+        `${process.env.NEXT_PUBLIC_ORIGIN}/api/auth/passkey/generate-authentication-options`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -166,7 +206,7 @@ export default function Home() {
 
       // Step 3: Send credential to server for verification
       const verifyResponse = await fetch(
-        '/api/auth/passkey/verify-authentication',
+        `${process.env.NEXT_PUBLIC_ORIGIN}/api/auth/passkey/verify-authentication`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

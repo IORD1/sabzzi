@@ -17,7 +17,7 @@ export default function SettingsPage() {
     setHapticsEnabled(getHapticPreference());
 
     // Load user session
-    fetch('/api/auth/session')
+    fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/auth/session`)
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated) {
@@ -54,7 +54,7 @@ export default function SettingsPage() {
 
     try {
       // Call logout API to clear session
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/auth/logout`, { method: 'POST' });
 
       // Clear any local storage
       localStorage.clear();

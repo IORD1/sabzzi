@@ -87,7 +87,7 @@ export default function EditListPage() {
   const loadList = async () => {
     setIsLoadingList(true);
     try {
-      const response = await fetch(`/api/lists/${listId}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/${listId}`);
       if (response.ok) {
         const data = await response.json();
         const list = data.list;
@@ -112,7 +112,7 @@ export default function EditListPage() {
   const loadAllItems = async () => {
     setIsLoadingItems(true);
     try {
-      const response = await fetch('/api/items');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/items`);
       if (response.ok) {
         const data = await response.json();
         setAllAvailableItems(data.items || []);
@@ -207,7 +207,7 @@ export default function EditListPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/lists/${listId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/${listId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

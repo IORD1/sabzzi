@@ -7,6 +7,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { pin, name } = body;
 
+    console.log('🔐 Generate Registration Options - Configuration:', {
+      rpID,
+      rpName,
+      env: process.env.NODE_ENV,
+      NEXT_PUBLIC_RP_ID: process.env.NEXT_PUBLIC_RP_ID,
+      VERCEL_URL: process.env.VERCEL_URL,
+      NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
+    });
+
     // Verify PIN
     if (pin !== '4452') {
       return NextResponse.json(
@@ -38,6 +47,13 @@ export async function POST(request: NextRequest) {
         userVerification: 'required',
         residentKey: 'required',
       },
+    });
+
+    console.log('✅ Generated registration options:', {
+      rpID: options.rp.id,
+      rpName: options.rp.name,
+      userName: options.user.name,
+      tempUserId,
     });
 
     // Store the challenge

@@ -52,7 +52,7 @@ export function ShareListDialog({
     setIsLoading(true);
     try {
       // Fetch all users
-      const usersResponse = await fetch('/api/users');
+      const usersResponse = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/users`);
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
         // Filter out current user
@@ -63,7 +63,7 @@ export function ShareListDialog({
       }
 
       // Fetch currently shared users
-      const sharedResponse = await fetch(`/api/lists/${listId}/share`);
+      const sharedResponse = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/${listId}/share`);
       if (sharedResponse.ok) {
         const sharedData = await sharedResponse.json();
         setSharedUsers(sharedData.sharedWith || []);
@@ -99,7 +99,7 @@ export function ShareListDialog({
     setIsSaving(true);
 
     try {
-      const response = await fetch(`/api/lists/${listId}/share`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/${listId}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ export function ShareListDialog({
 
     try {
       const response = await fetch(
-        `/api/lists/${listId}/unshare/${userId}`,
+        `${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/${listId}/unshare/${userId}`,
         {
           method: 'DELETE',
         }

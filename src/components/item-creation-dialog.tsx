@@ -48,7 +48,7 @@ export function ItemCreationDialog({
     try {
       // Save to database if checkbox is checked
       if (saveToDatabase) {
-        const response = await fetch('/api/items', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

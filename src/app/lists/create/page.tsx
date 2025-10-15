@@ -80,7 +80,7 @@ export default function CreateListPage() {
   const loadAllItems = async () => {
     setIsLoadingItems(true);
     try {
-      const response = await fetch('/api/items');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/items`);
       if (response.ok) {
         const data = await response.json();
         setAllAvailableItems(data.items || []);
@@ -95,7 +95,7 @@ export default function CreateListPage() {
 
   const generateListName = async () => {
     try {
-      const response = await fetch('/api/lists/generate-name');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists/generate-name`);
       if (response.ok) {
         const data = await response.json();
         setListName(data.name);
@@ -189,7 +189,7 @@ export default function CreateListPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/lists', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/lists`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
