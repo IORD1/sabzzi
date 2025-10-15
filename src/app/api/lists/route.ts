@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
     const userId = session.userId;
 
+    console.log('📝 Creating list for userId:', userId);
+
     const body = await request.json();
     const { name, emoji, items } = body;
 

@@ -88,6 +88,8 @@ export async function POST(request: NextRequest) {
     await usersCollection.insertOne(userRecord);
 
     // Create session
+    console.log('✅ Registration successful, creating session for userId:', userId);
+
     const response = NextResponse.json({
       success: true,
       userId,
@@ -140,6 +142,8 @@ export async function PUT(request: NextRequest) {
     );
 
     // Create session
+    console.log('✅ Login successful, creating session for userId:', user.userId);
+
     const response = NextResponse.json({
       success: true,
       userId: user.userId,

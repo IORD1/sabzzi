@@ -20,7 +20,7 @@ export async function createSession(userId: string, name: string): Promise<void>
   cookieStore.set(SESSION_COOKIE_NAME, JSON.stringify(sessionData), {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax', // 'strict' for better security in production
+    sameSite: 'lax', // 'lax' works better with PWA apps on mobile
     maxAge: 60 * 60 * 24 * 30, // 30 days
     path: '/',
   });
@@ -35,10 +35,12 @@ export async function getSession(): Promise<SessionData | null> {
     const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
 
     if (!sessionCookie?.value) {
+      console.log('⚠️ No session cookie found');
       return null;
     }
 
     const sessionData = JSON.parse(sessionCookie.value) as SessionData;
+    console.log('✅ Session found for userId:', sessionData.userId);
     return sessionData;
   } catch (error) {
     console.error('Error parsing session:', error);
@@ -90,7 +92,7 @@ export function setSessionCookie(
   response.cookies.set(SESSION_COOKIE_NAME, JSON.stringify(sessionData), {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax', // 'strict' for better security in production
+    sameSite: 'lax', // 'lax' works better with PWA apps on mobile
     maxAge: 60 * 60 * 24 * 30, // 30 days
     path: '/',
   });

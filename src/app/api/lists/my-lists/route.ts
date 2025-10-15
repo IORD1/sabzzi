@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
     const userId = session.userId;
 
+    console.log('🔍 Fetching my-lists for userId:', userId);
+
     const db = await getSabzziDatabase();
     const listsCollection = db.collection('lists');
 
@@ -16,6 +18,8 @@ export async function GET(request: NextRequest) {
       .find({ createdBy: userId })
       .sort({ createdAt: -1 })
       .toArray();
+
+    console.log(`📋 Found ${lists.length} lists for userId: ${userId}`);
 
     // Add computed fields for UI
     const listsWithStats = lists.map((list) => {
