@@ -1,0 +1,58 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { generateRegistrationOptions } from '@simplewebauthn/server';
+import { storeChallenge, rpName, rpID } from '@/lib/webauthn-config';
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { pin, name } = body;
+
+    // Verify PIN
+    if (pin !== '4452') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid PIN' },
+        { status: 403 }
+      );
+    }
+
+    // Validate name
+    if (!name || !name.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Name is required' },
+        { status: 400 }
+      );
+    }
+
+    // Generate a temporary user ID for challenge storage
+    const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Generate registration options
+    const options = await generateRegistrationOptions({
+      rpName,
+      rpID,
+      userName: name.trim(),
+      userDisplayName: name.trim(),
+      // Require user verification (biometrics/PIN)
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        userVerification: 'required',
+        residentKey: 'required',
+      },
+    });
+
+    // Store the challenge
+    storeChallenge(tempUserId, options.challenge);
+
+    return NextResponse.json({
+      success: true,
+      options,
+      tempUserId,
+    });
+  } catch (error) {
+    console.error('Error generating registration options:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to generate registration options' },
+      { status: 500 }
+    );
+  }
+}

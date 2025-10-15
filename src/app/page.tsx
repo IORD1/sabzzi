@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,10 +18,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [userName, setUserName] = useState('');
-  const [pendingCredential, setPendingCredential] = useState<{
-    credentialId: number[];
-    publicKey: number[];
-  } | null>(null);
+  const [pin, setPin] = useState('');
+  const [showPinDialog, setShowPinDialog] = useState(false);
 
   useEffect(() => {
     // Check if we're in development mode
@@ -59,69 +58,71 @@ export default function Home() {
     }
   };
 
-  const handleRegisterPasskey = async () => {
+  const handleRegisterPasskey = () => {
+    // Show PIN dialog
+    setShowPinDialog(true);
+  };
+
+  const handleStartRegistration = async () => {
+    if (!userName.trim() || !pin) {
+      alert('Please enter your name and PIN');
+      return;
+    }
+
     try {
       setIsLoading(true);
+      setShowNameDialog(false);
 
-      // Step 1: Ask for PIN
-      const pin = prompt('Enter developer PIN to register:');
-      if (!pin) {
+      // Step 1: Get registration options from server
+      const optionsResponse = await fetch(
+        '/api/auth/passkey/generate-registration-options',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin, name: userName.trim() }),
+        }
+      );
+
+      const optionsData = await optionsResponse.json();
+
+      if (!optionsData.success) {
+        alert(optionsData.error || 'Failed to generate registration options');
         setIsLoading(false);
+        setShowNameDialog(true);
         return;
       }
 
-      // Step 2: Generate random user ID for WebAuthn
-      const userId = new Uint8Array(16);
-      crypto.getRandomValues(userId);
+      // Step 2: Start WebAuthn registration (this shows biometric prompt)
+      const credential = await startRegistration(optionsData.options);
 
-      // Step 3: Create WebAuthn credential
-      const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
-        challenge: new Uint8Array(16), // Random challenge
-        rp: {
-          name: 'Sabzzi - Grocery Tracker',
-          id: window.location.hostname,
-        },
-        user: {
-          id: userId,
-          name: 'user@sabzzi.app',
-          displayName: 'Sabzzi User',
-        },
-        pubKeyCredParams: [
-          {
-            alg: -7, // ES256 algorithm
-            type: 'public-key',
-          },
-        ],
-        authenticatorSelection: {
-          authenticatorAttachment: 'platform',
-          userVerification: 'required',
-        },
-        timeout: 60000,
-      };
+      // Step 3: Send credential to server for verification
+      const verifyResponse = await fetch(
+        '/api/auth/passkey/verify-registration',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tempUserId: optionsData.tempUserId,
+            name: userName.trim(),
+            credential,
+          }),
+        }
+      );
 
-      // Step 4: Trigger biometric authentication
-      const credential = (await navigator.credentials.create({
-        publicKey: publicKeyCredentialCreationOptions,
-      })) as PublicKeyCredential;
+      const verifyData = await verifyResponse.json();
 
-      if (credential) {
-        // Step 5: Extract credential data
-        const credentialId = Array.from(new Uint8Array(credential.rawId));
-        const publicKey = Array.from(
-          new Uint8Array((credential.response as any).getPublicKey())
-        );
-
-        // Step 6: Store temporarily and show name dialog
-        setPendingCredential({ credentialId, publicKey });
+      if (verifyData.success) {
+        console.log('✅ Registration successful:', verifyData);
+        alert(`Welcome ${verifyData.name}! Your account has been created.`);
+        setUserName('');
+        setPin('');
+        router.push('/home');
+      } else {
+        alert(verifyData.error || 'Failed to verify registration');
         setShowNameDialog(true);
       }
     } catch (error: any) {
-      console.error('❌ Error registering passkey:', error);
-      console.error('Error details:', {
-        name: error.name,
-        message: error.message,
-        code: error.code,
-      });
+      console.error('❌ Error during registration:', error);
 
       let errorMessage = 'Failed to register passkey. Please try again.';
       if (error.name === 'NotAllowedError') {
@@ -133,48 +134,7 @@ export default function Home() {
       }
 
       alert(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCompletRegistration = async () => {
-    if (!pendingCredential || !userName.trim()) {
-      alert('Please enter your name');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-
-      // Send registration data to backend
-      const response = await fetch('/api/auth/passkey', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          credentialId: pendingCredential.credentialId,
-          publicKey: pendingCredential.publicKey,
-          pin: prompt('Enter developer PIN again to confirm:'),
-          name: userName.trim(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        console.log('✅ Registration successful:', data);
-        alert(`Welcome ${data.name}! Your account has been created.`);
-        setShowNameDialog(false);
-        setPendingCredential(null);
-        setUserName('');
-        router.push('/home');
-      } else {
-        console.error('❌ Registration failed:', data);
-        alert(data.error || 'Failed to register');
-      }
-    } catch (error) {
-      console.error('Error completing registration:', error);
-      alert('Failed to complete registration');
+      setShowNameDialog(true);
     } finally {
       setIsLoading(false);
     }
@@ -184,50 +144,56 @@ export default function Home() {
     try {
       setIsLoading(true);
 
-      // Step 1: Request authentication from device
-      const assertion = (await navigator.credentials.get({
-        publicKey: {
-          challenge: new Uint8Array(16),
-          userVerification: 'required',
-        },
-      })) as PublicKeyCredential;
-
-      if (assertion) {
-        // Step 2: Extract credential ID
-        const credentialId = Array.from(new Uint8Array(assertion.rawId));
-
-        // Step 3: Send to backend
-        const response = await fetch('/api/auth/passkey', {
-          method: 'PUT',
+      // Step 1: Get authentication options from server
+      const optionsResponse = await fetch(
+        '/api/auth/passkey/generate-authentication-options',
+        {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credentialId }),
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          console.log('✅ Login successful:', data);
-          alert(`Welcome back, ${data.name}!`);
-          router.push('/home');
-        } else {
-          console.error('❌ Login failed:', data);
-          alert(data.error || 'User not found. Please register first.');
         }
+      );
+
+      const optionsData = await optionsResponse.json();
+
+      if (!optionsData.success) {
+        alert(optionsData.error || 'Failed to generate authentication options');
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: Start WebAuthn authentication (this shows biometric prompt)
+      const credential = await startAuthentication(optionsData.options);
+
+      // Step 3: Send credential to server for verification
+      const verifyResponse = await fetch(
+        '/api/auth/passkey/verify-authentication',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tempUserId: optionsData.tempUserId,
+            credential,
+          }),
+        }
+      );
+
+      const verifyData = await verifyResponse.json();
+
+      if (verifyData.success) {
+        console.log('✅ Login successful:', verifyData);
+        alert(`Welcome back, ${verifyData.name}!`);
+        router.push('/home');
+      } else {
+        alert(verifyData.error || 'Authentication failed');
       }
     } catch (error: any) {
-      console.error('❌ Error authenticating with passkey:', error);
-      console.error('Error details:', {
-        name: error.name,
-        message: error.message,
-        code: error.code,
-      });
+      console.error('❌ Error during authentication:', error);
 
-      // Provide more helpful error messages
       let errorMessage = 'Failed to authenticate. Please try again.';
       if (error.name === 'NotAllowedError') {
         errorMessage = 'Authentication was cancelled or timed out.';
       } else if (error.name === 'InvalidStateError') {
-        errorMessage = 'No passkey found for this device. Please register a new passkey on this device first.';
+        errorMessage = 'No passkey found for this device. Please register first.';
       } else if (error.name === 'NotSupportedError') {
         errorMessage = 'Passkeys are not supported on this device/browser.';
       } else if (error.name === 'SecurityError') {
@@ -288,6 +254,62 @@ export default function Home() {
         </p>
       </div>
 
+      {/* PIN Dialog */}
+      <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Developer Access</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Enter PIN to register
+            </p>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">PIN</label>
+              <Input
+                type="password"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="Enter developer PIN"
+                className="h-11"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && pin) {
+                    setShowPinDialog(false);
+                    setShowNameDialog(true);
+                  }
+                }}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowPinDialog(false);
+                  setPin('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  if (pin) {
+                    setShowPinDialog(false);
+                    setShowNameDialog(true);
+                  }
+                }}
+                disabled={!pin}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Name Dialog */}
       <Dialog open={showNameDialog} onOpenChange={setShowNameDialog}>
         <DialogContent>
@@ -308,7 +330,7 @@ export default function Home() {
                 className="h-11"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    handleCompletRegistration();
+                    handleStartRegistration();
                   }
                 }}
               />
@@ -320,18 +342,19 @@ export default function Home() {
                 className="flex-1"
                 onClick={() => {
                   setShowNameDialog(false);
-                  setPendingCredential(null);
+                  setShowPinDialog(false);
                   setUserName('');
+                  setPin('');
                 }}
               >
                 Cancel
               </Button>
               <Button
                 className="flex-1"
-                onClick={handleCompletRegistration}
+                onClick={handleStartRegistration}
                 disabled={!userName.trim() || isLoading}
               >
-                {isLoading ? 'Creating...' : 'Complete Registration'}
+                {isLoading ? 'Registering...' : 'Register'}
               </Button>
             </div>
           </div>

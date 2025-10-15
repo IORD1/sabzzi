@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 export function AppFooter() {
   const [showHearts, setShowHearts] = useState(false);
-  const version = '1.31.7';
+  const version = '1.3.1';
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 py-2 text-center pointer-events-none z-50 bg-gradient-to-t from-background to-transparent">
