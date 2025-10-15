@@ -1,7 +1,48 @@
 // WebAuthn configuration
 export const rpName = 'Sabzzi - Grocery Tracker';
-export const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
-export const expectedOrigin = process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000';
+
+// Auto-detect RP ID and origin based on environment
+function getRpConfig() {
+  // If explicitly set in environment, use those
+  if (process.env.NEXT_PUBLIC_RP_ID && process.env.NEXT_PUBLIC_ORIGIN) {
+    return {
+      rpID: process.env.NEXT_PUBLIC_RP_ID,
+      expectedOrigin: process.env.NEXT_PUBLIC_ORIGIN,
+    };
+  }
+
+  // Otherwise, auto-detect based on deployment
+  const isProduction = process.env.NODE_ENV === 'production';
+  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL;
+
+  if (isProduction && vercelUrl) {
+    // Running on Vercel in production
+    return {
+      rpID: vercelUrl,
+      expectedOrigin: `https://${vercelUrl}`,
+    };
+  }
+
+  // Development fallback
+  return {
+    rpID: 'localhost',
+    expectedOrigin: 'http://localhost:3000',
+  };
+}
+
+const config = getRpConfig();
+export const rpID = config.rpID;
+export const expectedOrigin = config.expectedOrigin;
+
+// Log configuration on server startup
+if (typeof window === 'undefined') {
+  console.log('🔐 WebAuthn Configuration:', {
+    rpID,
+    expectedOrigin,
+    env: process.env.NODE_ENV,
+    vercelUrl: process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL || 'not set',
+  });
+}
 
 // In-memory challenge storage (in production, use Redis or similar)
 const challenges = new Map<string, { challenge: string; timestamp: number }>();

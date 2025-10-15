@@ -19,31 +19,28 @@ This app now uses **@simplewebauthn** - the industry-standard library for WebAut
 
 ## Environment Variables
 
-### Development (localhost)
-Already configured in `.env`:
+### ✨ Auto-Detection (Default)
+The app now **automatically detects** the correct domain when deployed on Vercel!
+
+- **Development:** Uses `localhost` and `http://localhost:3000`
+- **Production on Vercel:** Automatically uses your Vercel deployment URL
+
+**No manual configuration needed!** 🎉
+
+### Manual Override (Optional)
+If you want to use a custom domain or override the auto-detection, you can set:
+
 ```
-NEXT_PUBLIC_RP_ID=localhost
-NEXT_PUBLIC_ORIGIN=http://localhost:3000
+NEXT_PUBLIC_RP_ID=your-custom-domain.com
+NEXT_PUBLIC_ORIGIN=https://your-custom-domain.com
 ```
 
-### Production (Vercel)
-Add these to your Vercel project environment variables:
-```
-NEXT_PUBLIC_RP_ID=sabzzi.vercel.app
-NEXT_PUBLIC_ORIGIN=https://sabzzi.vercel.app
-```
+In Vercel Dashboard → Settings → Environment Variables.
 
-**IMPORTANT:** Replace `sabzzi.vercel.app` with your actual Vercel domain!
-
-## How to Set Vercel Environment Variables
-
-1. Go to your Vercel project dashboard
-2. Navigate to **Settings** → **Environment Variables**
-3. Add these two variables:
-   - `NEXT_PUBLIC_RP_ID` = `your-app.vercel.app` (or your custom domain)
-   - `NEXT_PUBLIC_ORIGIN` = `https://your-app.vercel.app`
-4. Make sure to select **Production**, **Preview**, and **Development** environments
-5. Redeploy your app for changes to take effect
+This is only needed if:
+- You have a custom domain
+- You want to explicitly control the configuration
+- Auto-detection isn't working for your setup
 
 ## Registration Flow
 
