@@ -67,8 +67,16 @@ export async function POST(request: NextRequest) {
     const authCollection = db.collection('auth');
     const usersCollection = db.collection('users');
 
-    // Check if credential already exists
-    const credentialIdString = Buffer.from(credentialData.id).toString('base64');
+    // Handle credential ID - it may be a string (base64url) or Uint8Array
+    let credentialIdString: string;
+    if (typeof credentialData.id === 'string') {
+      // Already a base64url string, use as-is
+      credentialIdString = credentialData.id;
+    } else {
+      // Uint8Array, convert to base64url
+      credentialIdString = Buffer.from(credentialData.id).toString('base64url');
+    }
+
     const existingUser = await authCollection.findOne({
       credentialIdString,
     });
@@ -83,13 +91,21 @@ export async function POST(request: NextRequest) {
     // Generate unique user ID
     const userId = generateUserId();
 
+    // Handle public key - may be string or Uint8Array
+    let credentialPublicKey: string;
+    if (typeof credentialData.publicKey === 'string') {
+      credentialPublicKey = credentialData.publicKey;
+    } else {
+      credentialPublicKey = Buffer.from(credentialData.publicKey).toString('base64');
+    }
+
     // Create auth record
     const authRecord = {
       userId,
       name: name.trim(),
-      credentialId: Buffer.from(credentialData.id).toString('base64'),
+      credentialId: credentialIdString, // Use the same format
       credentialIdString,
-      credentialPublicKey: Buffer.from(credentialData.publicKey).toString('base64'),
+      credentialPublicKey,
       counter: credentialData.counter,
       credentialDeviceType: 'public-key',
       credentialBackedUp: false,

@@ -36,6 +36,15 @@ interface SearchResultItem {
   usageCount?: number;
 }
 
+// Helper function to infer quantity type from unit
+const inferQuantityType = (unit?: string): 'weight' | 'money' | 'count' => {
+  if (!unit) return 'count';
+  const lowerUnit = unit.toLowerCase();
+  if (lowerUnit === 'g' || lowerUnit === 'kg') return 'weight';
+  if (lowerUnit === '₹' || lowerUnit === 'rs' || lowerUnit === 'rupees') return 'money';
+  return 'count';
+};
+
 export default function EditListPage() {
   const router = useRouter();
   const params = useParams();
@@ -429,6 +438,7 @@ export default function EditListPage() {
           onConfirm={handleQuantityConfirm}
           itemName={selectedItem.itemName}
           defaultQuantity={selectedItem.defaultQuantity}
+          defaultQuantityType={inferQuantityType(selectedItem.defaultQuantity?.unit)}
         />
       )}
     </div>

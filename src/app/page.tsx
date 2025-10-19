@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import { Button } from '@/components/ui/button';
@@ -14,49 +14,11 @@ import { Input } from '@/components/ui/input';
 
 export default function Home() {
   const router = useRouter();
-  const [isDevMode, setIsDevMode] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [userName, setUserName] = useState('');
   const [pin, setPin] = useState('');
   const [showPinDialog, setShowPinDialog] = useState(false);
-
-  useEffect(() => {
-    // Check if we're in development mode
-    // Only auto-login if explicitly in development
-    const isDev = process.env.NODE_ENV === 'development';
-
-    setIsDevMode(isDev);
-
-    if (isDev) {
-      // Auto-login dev user and redirect
-      handleDevAuth();
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const handleDevAuth = async () => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/dev-auth`, {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Dev user authenticated:', data.user);
-
-        // Redirect to home page
-        router.push('/home');
-      } else {
-        console.error('Failed to authenticate dev user');
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error('Dev auth error:', error);
-      setIsLoading(false);
-    }
-  };
 
   const handleRegisterPasskey = () => {
     // Show PIN dialog
@@ -246,19 +208,6 @@ export default function Home() {
     }
   };
 
-  // Show loading while auto-authenticating in dev mode
-  if (isDevMode && isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading dev environment...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Production login screen (will be implemented later)
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 pb-12">
       <div className="text-center max-w-md mx-auto px-4">

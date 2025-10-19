@@ -33,6 +33,15 @@ interface SearchResultItem {
   usageCount?: number;
 }
 
+// Helper function to infer quantity type from unit
+const inferQuantityType = (unit?: string): 'weight' | 'money' | 'count' => {
+  if (!unit) return 'count';
+  const lowerUnit = unit.toLowerCase();
+  if (lowerUnit === 'g' || lowerUnit === 'kg') return 'weight';
+  if (lowerUnit === '₹' || lowerUnit === 'rs' || lowerUnit === 'rupees') return 'money';
+  return 'count';
+};
+
 export default function CreateListPage() {
   const router = useRouter();
   const [listName, setListName] = useState('');
@@ -117,7 +126,7 @@ export default function CreateListPage() {
 
   const handleAddItem = (item: ListItem) => {
     haptics.buttonTap();
-    setItems([...items, item]);
+    setItems([item, ...items]);
     setSearchQuery('');
   };
 
@@ -283,7 +292,7 @@ export default function CreateListPage() {
             </div>
           ) : filteredItems.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {filteredItems.map((item) => (
+              {filteredItems.slice(0, 30).map((item) => (
                 <button
                   key={item.itemId}
                   onClick={() => handleSelectItem(item)}
@@ -395,6 +404,7 @@ export default function CreateListPage() {
           onConfirm={handleQuantityConfirm}
           itemName={selectedItem.itemName}
           defaultQuantity={selectedItem.defaultQuantity}
+          defaultQuantityType={inferQuantityType(selectedItem.defaultQuantity?.unit)}
         />
       )}
     </div>

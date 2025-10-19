@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
     const authCollection = db.collection('auth');
 
     // Find the user by credential ID
-    const credentialIdString = credential.id; // Already base64 encoded
+    const credentialIdString = credential.id; // Base64url encoded from browser
+
     const user = await authCollection.findOne({
       credentialIdString,
     });
@@ -33,20 +34,26 @@ export async function POST(request: NextRequest) {
     if (!user) {
       await deleteChallenge(tempUserId);
       return NextResponse.json(
-        { success: false, error: 'User not found with this passkey' },
+        {
+          success: false,
+          error: 'No passkey found on this device. Please register first or use a device where you previously registered a passkey.'
+        },
         { status: 404 }
       );
     }
 
     // Verify the authentication response
+    // Convert public key from base64 string to Uint8Array
+    const publicKeyBuffer = Buffer.from(user.credentialPublicKey, 'base64');
+
     const verification = await verifyAuthenticationResponse({
       response: credential,
       expectedChallenge,
       expectedOrigin,
       expectedRPID: rpID,
       credential: {
-        id: user.credentialId,
-        publicKey: user.credentialPublicKey,
+        id: user.credentialId, // Keep as base64url string
+        publicKey: new Uint8Array(publicKeyBuffer), // Convert to Uint8Array
         counter: user.counter || 0,
         transports: user.transports || [],
       },

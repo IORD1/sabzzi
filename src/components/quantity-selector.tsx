@@ -17,6 +17,7 @@ interface QuantitySelectorProps {
   onConfirm: (quantity: { value: number; unit: string }, type: QuantityType) => void;
   itemName: string;
   defaultQuantity?: { value: number; unit: string };
+  defaultQuantityType?: QuantityType;
 }
 
 type QuantityType = 'weight' | 'money' | 'count';
@@ -51,8 +52,9 @@ export function QuantitySelector({
   onConfirm,
   itemName,
   defaultQuantity,
+  defaultQuantityType,
 }: QuantitySelectorProps) {
-  const [quantityType, setQuantityType] = useState<QuantityType>('count');
+  const [quantityType, setQuantityType] = useState<QuantityType>(defaultQuantityType || 'count');
   const [customValue, setCustomValue] = useState('');
   const [selectedPreset, setSelectedPreset] = useState<{
     value: number;
