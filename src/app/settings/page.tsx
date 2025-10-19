@@ -2,15 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, LogOut } from 'lucide-react';
+import { ArrowLeft, LogOut, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { haptics, getHapticPreference, setHapticPreference } from '@/lib/haptics';
+import { APP_VERSION } from '@/lib/version';
 
 export default function SettingsPage() {
   const router = useRouter();
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [userName, setUserName] = useState('Loading...');
   const [userId, setUserId] = useState('');
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'up-to-date' | 'updating'>('idle');
+  const [hasWaitingSW, setHasWaitingSW] = useState(false);
 
   useEffect(() => {
     // Load haptics preference
@@ -28,6 +31,16 @@ export default function SettingsPage() {
       .catch((error) => {
         console.error('Error loading session:', error);
       });
+
+    // Check if there's a waiting service worker
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        if (registration.waiting) {
+          setHasWaitingSW(true);
+          setUpdateStatus('available');
+        }
+      });
+    }
   }, []);
 
   const handleBack = () => {
@@ -42,6 +55,67 @@ export default function SettingsPage() {
 
     if (newValue) {
       haptics.buttonTap();
+    }
+  };
+
+  const handleCheckForUpdates = async () => {
+    haptics.buttonTap();
+
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      alert('Service workers are not supported in this browser');
+      return;
+    }
+
+    setUpdateStatus('checking');
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+
+      // Trigger update check
+      await registration.update();
+
+      // Wait a bit for the update to be detected
+      setTimeout(() => {
+        if (registration.waiting) {
+          setHasWaitingSW(true);
+          setUpdateStatus('available');
+        } else {
+          setUpdateStatus('up-to-date');
+          setTimeout(() => setUpdateStatus('idle'), 3000);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+      setUpdateStatus('idle');
+      alert('Failed to check for updates');
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    haptics.buttonTap();
+
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      return;
+    }
+
+    setUpdateStatus('updating');
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+
+      if (registration.waiting) {
+        // Send skip waiting message
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+        // Wait for controller change and reload
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+      }
+    } catch (error) {
+      console.error('Error installing update:', error);
+      setUpdateStatus('available');
+      alert('Failed to install update');
     }
   };
 
@@ -134,6 +208,68 @@ export default function SettingsPage() {
                 />
               </div>
             </button>
+
+            {/* App Version & Updates */}
+            <div className="p-4 border rounded-lg bg-card">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-left">
+                  <div className="text-sm font-medium">App Version</div>
+                  <div className="text-xs text-muted-foreground">
+                    Current: v{APP_VERSION}
+                  </div>
+                </div>
+                {updateStatus === 'available' && (
+                  <div className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
+                    Update Available
+                  </div>
+                )}
+                {updateStatus === 'up-to-date' && (
+                  <div className="text-xs font-medium text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                    Up to date
+                  </div>
+                )}
+              </div>
+
+              {updateStatus === 'available' || updateStatus === 'updating' ? (
+                <Button
+                  variant="default"
+                  className="w-full h-10 bg-green-600 hover:bg-green-700"
+                  onClick={handleInstallUpdate}
+                  disabled={updateStatus === 'updating'}
+                >
+                  {updateStatus === 'updating' ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Installing Update...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Install Update & Restart
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full h-10"
+                  onClick={handleCheckForUpdates}
+                  disabled={updateStatus === 'checking'}
+                >
+                  {updateStatus === 'checking' ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Check for Updates
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 

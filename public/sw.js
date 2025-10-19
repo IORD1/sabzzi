@@ -35,34 +35,74 @@ self.addEventListener('install', (event) => {
   // self.skipWaiting();
 });
 
-// Fetch event - serve from cache when offline
+// Fetch event - smart caching strategy
 self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // NEVER cache API routes - always fetch fresh data
+  if (url.pathname.startsWith('/api/')) {
+    console.log('[SW] API request - bypassing cache:', url.pathname);
+    event.respondWith(
+      fetch(request).catch((error) => {
+        console.error('[SW] API request failed:', error);
+        // Return a proper error response for API calls
+        return new Response(
+          JSON.stringify({ error: 'Network error', offline: true }),
+          {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      })
+    );
+    return;
+  }
+
+  // For everything else (pages, static assets), use Cache First strategy
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
+    caches.match(request)
+      .then((cachedResponse) => {
+        // Cache hit - return cached response
+        if (cachedResponse) {
+          console.log('[SW] Serving from cache:', url.pathname);
+          return cachedResponse;
         }
 
-        return fetch(event.request).then(
+        // Not in cache - fetch from network
+        console.log('[SW] Fetching from network:', url.pathname);
+        return fetch(request).then(
           (response) => {
             // Check if valid response
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
 
+            // Only cache GET requests
+            if (request.method !== 'GET') {
+              return response;
+            }
+
             // Clone the response
             const responseToCache = response.clone();
 
+            // Cache for offline use
             caches.open(CACHE_NAME)
               .then((cache) => {
-                cache.put(event.request, responseToCache);
+                cache.put(request, responseToCache);
               });
 
             return response;
           }
-        );
+        ).catch((error) => {
+          console.error('[SW] Fetch failed:', error);
+          // Return offline page or fallback
+          return new Response('Offline - please check your connection', {
+            status: 503,
+            statusText: 'Service Unavailable',
+          });
+        });
       })
   );
 });
