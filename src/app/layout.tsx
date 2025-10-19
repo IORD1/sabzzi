@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PWARegister } from "@/components/pwa-register";
+import { UpdateNotification } from "@/components/update-notification";
 import { AppFooter } from "@/components/app-footer";
 
 const geistSans = Geist({
@@ -48,6 +49,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <PWARegister />
+        <UpdateNotification />
         {children}
         <AppFooter />
       </body>
