@@ -60,6 +60,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // NEVER cache version.json - always fetch fresh to show correct version
+  if (url.pathname === '/version.json') {
+    console.log('[SW] version.json - bypassing cache');
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // For everything else (pages, static assets), use Cache First strategy
   event.respondWith(
     caches.match(request)

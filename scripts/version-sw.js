@@ -27,7 +27,15 @@ const updatedContent = swContent.replace(
 // Write updated service worker
 fs.writeFileSync(swPath, updatedContent);
 
-// Create version.ts file for the app to import
+// Create version.json for dynamic fetching (not cached by SW)
+const versionJsonPath = path.join(__dirname, '../public/version.json');
+const versionJson = {
+  version: version,
+  buildDate: new Date().toISOString(),
+};
+fs.writeFileSync(versionJsonPath, JSON.stringify(versionJson, null, 2));
+
+// Create version.ts file for fallback
 const versionTsPath = path.join(__dirname, '../src/lib/version.ts');
 const versionTsContent = `// Auto-generated file - do not edit manually
 // Updated by scripts/version-sw.js during build

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, LogOut, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { haptics, getHapticPreference, setHapticPreference } from '@/lib/haptics';
-import { APP_VERSION } from '@/lib/version';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -14,10 +13,17 @@ export default function SettingsPage() {
   const [userId, setUserId] = useState('');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'up-to-date' | 'updating'>('idle');
   const [hasWaitingSW, setHasWaitingSW] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState('...');
 
   useEffect(() => {
     // Load haptics preference
     setHapticsEnabled(getHapticPreference());
+
+    // Load current version dynamically
+    fetch('/version.json?' + Date.now())
+      .then((res) => res.json())
+      .then((data) => setCurrentVersion(data.version))
+      .catch(() => setCurrentVersion('1.0.0'));
 
     // Load user session
     fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/auth/session`)
@@ -71,19 +77,41 @@ export default function SettingsPage() {
     try {
       const registration = await navigator.serviceWorker.ready;
 
+      // Check if there's already a waiting service worker
+      if (registration.waiting) {
+        setHasWaitingSW(true);
+        setUpdateStatus('available');
+        return;
+      }
+
+      // Listen for new service worker installation
+      const updateFoundHandler = () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available
+              setHasWaitingSW(true);
+              setUpdateStatus('available');
+            }
+          });
+        }
+      };
+
+      registration.addEventListener('updatefound', updateFoundHandler);
+
       // Trigger update check
       await registration.update();
 
-      // Wait a bit for the update to be detected
+      // Wait for update to be found or timeout
       setTimeout(() => {
-        if (registration.waiting) {
-          setHasWaitingSW(true);
-          setUpdateStatus('available');
-        } else {
+        registration.removeEventListener('updatefound', updateFoundHandler);
+        if (updateStatus === 'checking') {
+          // No update found
           setUpdateStatus('up-to-date');
           setTimeout(() => setUpdateStatus('idle'), 3000);
         }
-      }, 1000);
+      }, 3000);
     } catch (error) {
       console.error('Error checking for updates:', error);
       setUpdateStatus('idle');
@@ -215,7 +243,7 @@ export default function SettingsPage() {
                 <div className="text-left">
                   <div className="text-sm font-medium">App Version</div>
                   <div className="text-xs text-muted-foreground">
-                    Current: v{APP_VERSION}
+                    Current: v{currentVersion}
                   </div>
                 </div>
                 {updateStatus === 'available' && (
